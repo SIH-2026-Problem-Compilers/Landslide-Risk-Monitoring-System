@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  --color-aztec: #002E6E;
+  --color-aztec-light: #003d8f;
+  --color-aztec-dark: #001d45;
+  --color-capri: #00B9F1;
+  --color-capri-light: #33c7f4;
+  --color-capri-dark: #0094c4;
+  --color-severity-low: #22c55e;
+  --color-severity-moderate: #eab308;
+  --color-severity-high: #f97316;
+  --color-severity-severe: #ef4444;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :root {
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 72px;
+    --navbar-height: 64px;
+  }
+
+  .dark {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: #1e293b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #334155;
+  }
+
+  .light {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-card: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+  }
+}
+
+@layer components {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .leaflet-container {
+    height: 100%;
+    width: 100%;
+    border-radius: 12px;
+  }
+}
+
+/* Leaflet custom markers */
+.risk-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+}
