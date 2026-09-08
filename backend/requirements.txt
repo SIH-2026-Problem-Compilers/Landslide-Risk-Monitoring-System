@@ -1,0 +1,15 @@
+# Packages for the LHASA API server.
+#
+# The full geospatial stack (xarray, rioxarray, pandas, netcdf4, ...) comes
+# from the LHASA conda environment declared in LHASA/lhasa.yml and is only
+# needed to run the live pipeline. numpy + xgboost let the server score the
+# real trained model (LHASA/model.json) with sample inputs when NASA live
+# data isn't configured, which is enough to run the whole frontend stack.
+#
+#   py -m venv backend/.venv            (or: conda activate lhasa)
+#   pip install -r backend/requirements.txt
+#
+fastapi>=0.115
+uvicorn[standard]>=0.30
+xgboost>=2.0
+numpy>=1.26
