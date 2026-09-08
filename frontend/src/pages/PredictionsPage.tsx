@@ -140,7 +140,7 @@ export function PredictionsPage() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Expected Rainfall</span>
-                      <span className="font-medium text-gray-800">{forecast.rainfall}mm</span>
+                      <span className="font-medium text-gray-800">{forecast.rainfall !== null ? `${forecast.rainfall}mm` : '—'}</span>
                     </div>
                     <div className="pt-2 border-t border-gray-100">
                       <p className="text-xs font-medium text-gray-700 mb-1">Factors:</p>

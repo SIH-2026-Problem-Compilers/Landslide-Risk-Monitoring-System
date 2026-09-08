@@ -187,7 +187,8 @@ export interface Forecast {
   riskScore: number;
   probability: number;
   severity: RiskLevel;
-  rainfall: number;
+  /** Expected rainfall in mm. Null when the data source does not report it (e.g. LHASA hazard output). */
+  rainfall: number | null;
   factors: string[];
 }
 
