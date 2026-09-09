@@ -76,6 +76,7 @@ export interface Alert {
   createdAt: string;
   updatedAt: string;
   source: string;
+  translations?: Record<string, { title: string; message: string }>;
 }
 
 // ---- Sensors ----

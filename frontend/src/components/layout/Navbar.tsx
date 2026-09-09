@@ -118,23 +118,23 @@ export function Navbar() {
                 <div className="px-3 py-2 border-b border-gray-50 hover:bg-gray-50">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-red-500 rounded-full" />
-                    <span className="text-xs font-medium text-gray-800">Severe - Sindhupalchok</span>
+                    <span className="text-xs font-medium text-gray-800">Severe - Aizawl</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">Risk score exceeded 90. Evacuate.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Risk score exceeded 90. Prepare evacuation.</p>
                 </div>
                 <div className="px-3 py-2 border-b border-gray-50 hover:bg-gray-50">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-orange-500 rounded-full" />
-                    <span className="text-xs font-medium text-gray-800">High Risk - Rasuwa</span>
+                    <span className="text-xs font-medium text-gray-800">High Risk - Mangan NH-10</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">Risk score 85. Monitor roads.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Risk score 89. Monitor road corridor.</p>
                 </div>
                 <div className="px-3 py-2 hover:bg-gray-50">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-yellow-500 rounded-full" />
-                    <span className="text-xs font-medium text-gray-800">Rainfall - Dolakha</span>
+                    <span className="text-xs font-medium text-gray-800">Rainfall - Shillong</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">80mm expected in 12 hours.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">95mm expected in 12 hours (IMD).</p>
                 </div>
               </div>
             </div>
@@ -152,7 +152,7 @@ export function Navbar() {
             </div>
             <div className="text-left hidden sm:block">
               <p className="text-xs font-medium text-gray-800">{user?.name || 'Admin User'}</p>
-              <p className="text-[10px] text-gray-500">{user?.email || 'admin@ner.gov.np'}</p>
+              <p className="text-[10px] text-gray-500">{user?.email || 'admin@ner-sdma.gov.in'}</p>
             </div>
           </button>
           {showProfileDropdown && (

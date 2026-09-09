@@ -266,9 +266,9 @@ export function LandingPage() {
               <div className="space-y-3 font-mono text-sm">
                 <p className="text-white/60">{'// Risk Assessment Output'}</p>
                 <p className="text-capri">const risk = {'{'}</p>
-                <p className="text-white/80 pl-4">zone: "Sindhupalchok North",</p>
-                <p className="text-white/80 pl-4">score: <span className="text-red-400">92</span>,</p>
-                <p className="text-white/80 pl-4">probability: <span className="text-red-400">0.87</span>,</p>
+                <p className="text-white/80 pl-4">zone: "Aizawl Escarpment",</p>
+                <p className="text-white/80 pl-4">score: <span className="text-red-400">94</span>,</p>
+                <p className="text-white/80 pl-4">probability: <span className="text-red-400">0.90</span>,</p>
                 <p className="text-white/80 pl-4">confidence: <span className="text-green-400">0.94</span>,</p>
                 <p className="text-white/80 pl-4">severity: <span className="text-red-400">"severe"</span>,</p>
                 <p className="text-white/80 pl-4">action: <span className="text-amber-300">"EVACUATE"</span></p>
@@ -296,10 +296,10 @@ export function LandingPage() {
                 </div>
                 <div className="space-y-3">
                   {[
-                    { zone: 'Sindhupalchok North', pop: '12,400', severity: 'severe', color: 'bg-red-500' },
-                    { zone: 'Rasuwa Corridor', pop: '4,200', severity: 'severe', color: 'bg-red-500' },
-                    { zone: 'Dolakha Ridge', pop: '8,200', severity: 'high', color: 'bg-orange-500' },
-                    { zone: 'Dhading Terraces', pop: '11,000', severity: 'high', color: 'bg-orange-500' },
+                    { zone: 'Aizawl Escarpment', pop: '400,000', severity: 'severe', color: 'bg-red-500' },
+                    { zone: 'Mangan NH-10', pop: '43,700', severity: 'severe', color: 'bg-red-500' },
+                    { zone: 'Shillong Plateau Edge', pop: '383,000', severity: 'high', color: 'bg-orange-500' },
+                    { zone: 'Haflong Highlands', pop: '213,000', severity: 'high', color: 'bg-orange-500' },
                   ].map((item) => (
                     <div key={item.zone} className="flex items-center gap-3 bg-white rounded-lg p-3 border border-gray-100">
                       <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />

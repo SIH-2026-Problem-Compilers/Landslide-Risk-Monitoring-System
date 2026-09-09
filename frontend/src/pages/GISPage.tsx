@@ -5,8 +5,12 @@ import { dashboardService, sensorService } from '../services';
 import { PageHeader } from '../components/ui/PageHeader';
 import { SeverityBadge } from '../components/ui/SeverityBadge';
 import { SkeletonMap } from '../components/ui/LoadingSkeleton';
+import { HeatmapLayer } from '../components/ui/HeatmapLayer';
 import { Layers } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+
+// LHASA API base (same as mlService)
+const API_BASE = (import.meta.env.VITE_LHASA_API_URL as string | undefined ?? '').replace(/\/+$/, '');
 
 const severityColors: Record<string, string> = {
   low: '#22c55e',
@@ -24,6 +28,7 @@ const severityRadius: Record<string, number> = {
 
 const layers = [
   { id: 'risk_zones', name: 'Risk Zones', visible: true },
+  { id: 'risk_heatmap', name: 'Risk Heatmap', visible: false },
   { id: 'villages', name: 'Villages', visible: true },
   { id: 'roads', name: 'Roads', visible: true },
   { id: 'hospitals', name: 'Hospitals', visible: false },
@@ -36,6 +41,12 @@ function MapLegend() {
   return null;
 }
 
+async function fetchHeatGrid() {
+  const res = await fetch(`${API_BASE}/api/v1/ml/grid?step=0.25`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export function GISPage() {
   const { data: riskZones, isLoading } = useQuery({
     queryKey: ['risk-zones'],
@@ -45,6 +56,12 @@ export function GISPage() {
   const { data: sensors } = useQuery({
     queryKey: ['sensors'],
     queryFn: sensorService.getSensors,
+  });
+
+  const { data: heatGrid = [] } = useQuery({
+    queryKey: ['heatmap-grid'],
+    queryFn: fetchHeatGrid,
+    staleTime: 60_000,
   });
 
   const [activeLayers, setActiveLayers] = useState(layers);
@@ -79,8 +96,8 @@ export function GISPage() {
           ) : (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ height: '600px' }}>
               <MapContainer
-                center={[27.7, 85.5]}
-                zoom={8}
+                center={[26.0, 92.7]}
+                zoom={6}
                 style={{ height: '100%', width: '100%' }}
                 scrollWheelZoom={true}
               >
@@ -89,6 +106,11 @@ export function GISPage() {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <MapLegend />
+
+                {/* Risk Heatmap Layer */}
+                {activeLayers.find((l) => l.id === 'risk_heatmap')?.visible && (
+                  <HeatmapLayer data={heatGrid} />
+                )}
 
                 {/* Risk Zone Markers */}
                 {activeLayers.find((l) => l.id === 'risk_zones')?.visible &&

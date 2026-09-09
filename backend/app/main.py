@@ -20,7 +20,9 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import config, output_reader, runner, scorer, zones
+from . import config, grid, output_reader, runner, scorer, zones
+from .db import init_db as init_database
+from .routers.ingest import router as data_router
 from .runner import RunStore
 from .schemas import PredictRequest, RunCreate
 
@@ -43,6 +45,10 @@ app.add_middleware(
 )
 
 store = RunStore()
+
+# Persisted platform data (sensor readings, reports, alerts, zone inputs).
+app.include_router(data_router)
+init_database()
 
 
 # --------------------------------------------------------------------------
@@ -140,6 +146,18 @@ def _recommendations_from(records: list[dict]) -> list[dict]:
 # --------------------------------------------------------------------------
 # health / readiness
 # --------------------------------------------------------------------------
+@app.get("/api/v1/ml/grid")
+def heatmap_grid(
+    north: float | None = None,
+    south: float | None = None,
+    east: float | None = None,
+    west: float | None = None,
+    step: float = 0.25,
+) -> list[dict]:
+    """Grid of model probabilities for the GIS heatmap layer."""
+    return grid.build_grid(north=north, south=south, east=east, west=west, step=step)
+
+
 @app.get("/api/v1/health")
 def health() -> dict:
     model_ok = config.MODEL_FILE.exists()

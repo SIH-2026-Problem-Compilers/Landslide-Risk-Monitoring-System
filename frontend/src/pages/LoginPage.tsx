@@ -11,7 +11,7 @@ const roles = [
 ];
 
 export function LoginPage() {
-  const [email, setEmail] = useState('admin@ner.gov.np');
+  const [email, setEmail] = useState('admin@ner-sdma.gov.in');
   const [password, setPassword] = useState('password');
   const [selectedRole, setSelectedRole] = useState<'admin' | 'disaster_officer' | 'citizen'>('admin');
   const [showPassword, setShowPassword] = useState(false);

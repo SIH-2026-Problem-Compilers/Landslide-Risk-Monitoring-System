@@ -31,7 +31,7 @@ export function SettingsPage() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Email</span>
-              <span className="text-sm font-medium text-gray-800">{user?.email || 'admin@ner.gov.np'}</span>
+              <span className="text-sm font-medium text-gray-800">{user?.email || 'admin@ner-sdma.gov.in'}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Role</span>

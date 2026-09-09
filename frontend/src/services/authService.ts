@@ -3,9 +3,9 @@ import type { LoginCredentials, User } from '../types';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const mockUsers: Record<string, User> = {
-  admin: { id: 'u-001', name: 'Admin User', email: 'admin@ner.gov.np', role: 'admin', avatar: '' },
-  officer: { id: 'u-002', name: 'Disaster Officer', email: 'officer@ner.gov.np', role: 'disaster_officer', district: 'Sindhupalchok', avatar: '' },
-  citizen: { id: 'u-003', name: 'Citizen User', email: 'citizen@ner.gov.np', role: 'citizen', avatar: '' },
+  admin: { id: 'u-001', name: 'SDMA Admin', email: 'admin@ner-sdma.gov.in', role: 'admin', avatar: '' },
+  officer: { id: 'u-002', name: 'District Officer', email: 'officer@ner-sdma.gov.in', role: 'disaster_officer', district: 'Aizawl', avatar: '' },
+  citizen: { id: 'u-003', name: 'Citizen User', email: 'citizen@ner-sdma.gov.in', role: 'citizen', avatar: '' },
 };
 
 export const authService = {

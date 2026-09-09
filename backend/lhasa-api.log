@@ -1,12 +1,39 @@
-INFO:     Started server process [7568]
+INFO:     Started server process [16772]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:60408 - "GET /api/v1/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60410 - "GET /api/v1/ml/predictions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60412 - "GET /api/v1/ml/forecasts HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60413 - "GET /api/v1/ml/recommendations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61995 - "GET /api/v1/ml/predictions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:61996 - "GET /api/v1/ml/recommendations HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57681 - "GET /api/v1/ml/predictions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57682 - "GET /api/v1/ml/recommendations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65516 - "GET /api/v1/ml/grid?step=0.25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65517 - "GET /api/v1/alerts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56012 - "POST /api/v1/ml/evaluate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64185 - "GET /api/v1/reports HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57950 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57951 - "GET /api/v1/ml/predictions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57952 - "GET /api/v1/ml/grid?step=0.5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57954 - "GET /api/v1/alerts?limit=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57957 - "GET /api/v1/ml/grid?step=1.0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52345 - "GET /api/v1/reports HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59296 - "GET /api/v1/ml/recommendations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58411 - "GET /api/v1/ml/predictions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59295 - "GET /api/v1/ml/forecasts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59974 - "GET /api/v1/alerts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51755 - "GET /api/v1/ml/grid?step=0.25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62320 - "GET /api/v1/ml/recommendations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63366 - "GET /api/v1/ml/predictions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62319 - "GET /api/v1/ml/forecasts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52168 - "GET /api/v1/reports HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58875 - "GET /api/v1/reports HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54741 - "GET /api/v1/ml/predictions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58253 - "GET /api/v1/ml/recommendations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58252 - "GET /api/v1/ml/forecasts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59090 - "GET /api/v1/ml/grid?step=0.25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56877 - "GET /api/v1/alerts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64114 - "GET /api/v1/ml/grid?step=0.25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51027 - "GET /api/v1/ml/predictions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61836 - "GET /api/v1/ml/recommendations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61837 - "GET /api/v1/ml/forecasts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60602 - "GET /api/v1/ml/predictions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60604 - "GET /api/v1/ml/recommendations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60603 - "GET /api/v1/ml/forecasts HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60368 - "GET /api/v1/ml/recommendations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60366 - "GET /api/v1/ml/predictions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60367 - "GET /api/v1/ml/forecasts HTTP/1.1" 200 OK

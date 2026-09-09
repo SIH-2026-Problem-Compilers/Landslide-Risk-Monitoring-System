@@ -12,6 +12,10 @@ produces a realistic spread across the four severity bands. Every record
 carries a "Sample inputs" factor so it is never mistaken for a live NASA
 nowcast. Set LHASA_DEMO=0 to disable this path; once a real run has
 completed, the API serves the real raster results instead.
+
+Since Phase 1, the samples are only a fallback: when real per-zone inputs
+are stored (IMD district rainfall feed or IoT sensor readings, see
+``app/inputs.py``), they override the samples before scoring.
 """
 from __future__ import annotations
 
@@ -19,26 +23,31 @@ import threading
 from datetime import datetime, timezone
 from typing import Optional
 
-from . import config
+from . import config, inputs
 from .output_reader import confidence_for, severity_for
 from .zones import MONITORING_ZONES
 
 MODEL_FEATURES = ["Lithology", "Slope", "pga", "gwetprof", "antecedent", "rain"]
 
-# Sample inputs per monitoring zone, calibrated so the real XGBoost model
-# responds across the severity scale. rain = current-day rainfall (mm),
+# Sample inputs per NER monitoring zone, calibrated so the real XGBoost
+# model responds across the severity scale. rain = current-day rainfall (mm),
 # wetness = soil profile wetness 0-1, antecedent = rain * 2 (2-day mm).
+# These are fallback values — when real zone inputs exist (sensor readings /
+# IMD feed, see app/inputs.py) they take precedence.
 ZONE_PARAMS: dict[str, dict] = {
-    "rz-001": {"lithology": 7, "slope": 33, "pga": 0.01, "wetness": 0.36, "rain": 30},
-    "rz-002": {"lithology": 6, "slope": 31, "pga": 0.01, "wetness": 0.12, "rain": 42},
-    "rz-003": {"lithology": 5, "slope": 22, "pga": 0.01, "wetness": 0.16, "rain": 30},
-    "rz-004": {"lithology": 6, "slope": 28, "pga": 0.01, "wetness": 0.28, "rain": 3},
-    "rz-005": {"lithology": 4, "slope": 18, "pga": 0.01, "wetness": 0.22, "rain": 3},
-    "rz-006": {"lithology": 7, "slope": 34, "pga": 0.01, "wetness": 0.36, "rain": 3},
-    "rz-007": {"lithology": 5, "slope": 27, "pga": 0.01, "wetness": 0.04, "rain": 39},
-    "rz-008": {"lithology": 4, "slope": 24, "pga": 0.01, "wetness": 0.24, "rain": 3},
-    "rz-009": {"lithology": 5, "slope": 26, "pga": 0.01, "wetness": 0.12, "rain": 3},
-    "rz-010": {"lithology": 4, "slope": 23, "pga": 0.01, "wetness": 0.28, "rain": 3},
+    "rz-001": {"lithology": 6, "slope": 30, "pga": 0.01, "wetness": 0.02, "rain": 3},   # p~0.41 moderate
+    "rz-002": {"lithology": 5, "slope": 28, "pga": 0.01, "wetness": 0.02, "rain": 3},   # p~0.39 moderate
+    "rz-003": {"lithology": 5, "slope": 25, "pga": 0.01, "wetness": 0.28, "rain": 6},   # p~0.54 high
+    "rz-004": {"lithology": 6, "slope": 28, "pga": 0.01, "wetness": 0.28, "rain": 3},   # p~0.44 moderate
+    "rz-005": {"lithology": 6, "slope": 31, "pga": 0.01, "wetness": 0.28, "rain": 42},  # p~0.75 high
+    "rz-006": {"lithology": 5, "slope": 27, "pga": 0.01, "wetness": 0.12, "rain": 3},   # p~0.40 moderate
+    "rz-007": {"lithology": 7, "slope": 33, "pga": 0.01, "wetness": 0.36, "rain": 42},  # p~0.94 severe
+    "rz-008": {"lithology": 6, "slope": 31, "pga": 0.01, "wetness": 0.12, "rain": 30},  # p~0.62 high
+    "rz-009": {"lithology": 6, "slope": 32, "pga": 0.01, "wetness": 0.24, "rain": 30},  # p~0.68 high
+    "rz-010": {"lithology": 6, "slope": 30, "pga": 0.01, "wetness": 0.28, "rain": 3},   # p~0.46 moderate
+    "rz-011": {"lithology": 7, "slope": 34, "pga": 0.01, "wetness": 0.36, "rain": 6},   # p~0.89 severe
+    "rz-012": {"lithology": 6, "slope": 30, "pga": 0.01, "wetness": 0.22, "rain": 3},   # p~0.44 moderate
+    "rz-013": {"lithology": 5, "slope": 24, "pga": 0.01, "wetness": 0.02, "rain": 3},   # p~0.36 moderate
 }
 
 # Relative rain / wetness multipliers per forecast day (relative to today's
@@ -77,7 +86,14 @@ def model_ready() -> bool:
 
 
 def _features_for(zone_id: str, scenario: Optional[str] = None) -> list[float]:
-    params = ZONE_PARAMS[zone_id]
+    params = dict(ZONE_PARAMS[zone_id])
+    # Live inputs (IMD feed / sensor readings) override the calibrated samples.
+    live = inputs.get_live(zone_id)
+    if live:
+        if live.get("rain") is not None:
+            params["rain"] = float(live["rain"])
+        if live.get("wetness") is not None:
+            params["wetness"] = float(live["wetness"])
     if scenario is None:
         rain_scale = wet_scale = 1.0
     else:
@@ -93,6 +109,12 @@ def _features_for(zone_id: str, scenario: Optional[str] = None) -> list[float]:
         rain * 2,  # antecedent: 2-day accumulated rainfall
         rain,
     ]
+
+
+def uses_live_inputs(zone_id: str) -> bool:
+    """True when the zone has real (non-sample) rainfall/moisture inputs."""
+    live = inputs.get_live(zone_id)
+    return bool(live and (live.get("rain") is not None or live.get("wetness") is not None))
 
 
 def probability_for(zone_id: str, scenario: Optional[str] = None) -> float:
@@ -111,11 +133,16 @@ def probability_for(zone_id: str, scenario: Optional[str] = None) -> float:
     return max(0.0, min(1.0, probability))
 
 
-def _factor_list(zone: dict, probability: float) -> list[str]:
+def _factor_list(zone: dict, probability: float, live: bool = False) -> list[str]:
+    source = (
+        "Live IMD/sensor inputs — real data"
+        if live
+        else "Sample inputs — demo mode (no live data yet)"
+    )
     return [
         f"Rainfall-triggered probability {probability:.0%}",
         f"Zone: {zone['district']}",
-        "Sample inputs — demo mode (no live NASA data)",
+        source,
         "Real LHASA model · XGBoost v2.1.1",
     ]
 
@@ -139,7 +166,9 @@ def predictions() -> list[dict]:
                 "severity": severity_for(probability),
                 "confidence": confidence_for(probability),
                 "timestamp": timestamp,
-                "factors": _factor_list(zone, probability),
+                "factors": _factor_list(
+                    zone, probability, live=uses_live_inputs(zone["id"])
+                ),
             }
         )
     return records

@@ -6,7 +6,17 @@ import { History, MapPin, Calendar, Filter } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { RiskLevel } from '../types';
 
-const states = ['All', 'Bagmati', 'Gandaki'];
+const states = [
+  'All',
+  'Arunachal Pradesh',
+  'Assam',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Sikkim',
+  'Tripura',
+];
 const severities: { value: RiskLevel | 'all'; label: string }[] = [
   { value: 'all', label: 'All Severity' },
   { value: 'severe', label: 'Severe' },

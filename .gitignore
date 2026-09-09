@@ -1,0 +1,27 @@
+# --- Python / backend ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# --- LHASA model runtime artifacts ---
+# Downloaded NASA data + model outputs generated when lhasa.py runs.
+# (static/, exposure/ and ref data must be downloaded separately, see LHASA/README.md)
+LHASA/static/
+LHASA/exposure/
+LHASA/imerg/
+LHASA/smap/
+LHASA/nrt/
+LHASA/fcast/
+LHASA/netrc
+LHASA/.netrc
+LHASA/.urs_cookies
+LHASA/.dodsrc
+
+# --- Backend local output (mirrors of model runs) ---
+backend/.lhasa_runs/
+backend/lhasa.db
+backend/data/imd/rainfall.json
+backend/lhasa-api.log
+frontend/dev-server.log

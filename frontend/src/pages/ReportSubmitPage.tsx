@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { reportService } from '../services';
 import { PageHeader } from '../components/ui/PageHeader';
 import {
-  Upload, MapPin, Camera, X, CheckCircle, AlertTriangle,
+  Upload, MapPin, Camera, X, CheckCircle, AlertTriangle, Wifi, WifiOff,
 } from 'lucide-react';
 import type { IncidentType } from '../types';
 
@@ -17,8 +17,9 @@ const incidentTypes: { value: IncidentType; label: string }[] = [
 ];
 
 const districts = [
-  'Sindhupalchok', 'Dolakha', 'Rasuwa', 'Gorkha', 'Dhading',
-  'Makwanpur', 'Nuwakot', 'Kavrepalanchok', 'Sindhuli', 'Ramechhap',
+  'West Kameng', 'Papum Pare', 'Dima Hasao', 'Senapati',
+  'East Khasi Hills', 'West Garo Hills', 'Aizawl', 'Lunglei',
+  'Kohima', 'Phek', 'Mangan', 'Gangtok', 'Dhalai',
 ];
 
 export function ReportSubmitPage() {
@@ -31,6 +32,20 @@ export function ReportSubmitPage() {
   const [images, setImages] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [online, setOnline] = useState(navigator.onLine);
+  const [queueCount, setQueueCount] = useState(0);
+
+  useEffect(() => {
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    reportService.getOfflineQueueCount().then(setQueueCount);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -47,6 +62,7 @@ export function ReportSubmitPage() {
     e.preventDefault();
     if (!district || !latitude || !longitude || !description) return;
     setSubmitting(true);
+    setQueueCount((c) => c + 1);
     try {
       await reportService.submitReport({
         type,
@@ -58,10 +74,10 @@ export function ReportSubmitPage() {
       });
       setSubmitted(true);
     } catch {
-      // Mock - just set submitted
-      setSubmitted(true);
+      // reportService handles offline queueing automatically
     } finally {
       setSubmitting(false);
+      reportService.getOfflineQueueCount().then(setQueueCount);
     }
   };
 
@@ -115,6 +131,20 @@ export function ReportSubmitPage() {
       <PageHeader
         title="Submit Report"
         subtitle="Report a landslide-related incident in your area"
+        actions={
+          <div className="flex items-center gap-3">
+            {queueCount > 0 && (
+              <span className="px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-medium rounded-lg flex items-center gap-1">
+                <WifiOff className="w-3 h-3" />
+                {queueCount} queued
+              </span>
+            )}
+            <div className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${online ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              {online ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+              {online ? 'Online' : 'Offline — reports will queue'}
+            </div>
+          </div>
+        }
       />
 
       <div className="max-w-2xl">
