@@ -2,14 +2,14 @@
 the ML/ingest routers already present.
 
 Routes added here:
-  GET  /api/v1/zones                  all 13 NER monitoring zones + live scores
+  GET  /api/v1/zones                  all 27 India monitoring zones + live scores
   GET  /api/v1/zones/{zone_id}        single zone detail
   GET  /api/v1/dashboard/summary      aggregated counts for the stat cards
   GET  /api/v1/dashboard/trends       7-day risk + rainfall trend (Open-Meteo)
   GET  /api/v1/dashboard/district-risk  stacked-bar data per district
   GET  /api/v1/dashboard/severity     pie chart distribution
   GET  /api/v1/dashboard/rainfall-risk  weekly rainfall vs risk correlation
-  GET  /api/v1/sensors                all 13 mock-but-live sensors
+  GET  /api/v1/sensors                all mock-but-live sensors
   GET  /api/v1/sensors/{sensor_id}    single sensor
   GET  /api/v1/sensors/{sensor_id}/readings   time-series readings from DB
   GET  /api/v1/roads                  road connectivity status
@@ -33,6 +33,7 @@ from ..db import get_session
 from ..models import AlertRecord, SensorReading, ZoneInput
 from ..output_reader import severity_for
 from ..providers import openmeteo as openmeteo_provider
+from ..providers import seismic as seismic_provider
 
 router = APIRouter(prefix="/api/v1")
 
@@ -144,6 +145,20 @@ def _zone_description(zone: dict) -> str:
         "rz-011": "NH-10 Teesta valley corridor with chronic landslide hotspots.",
         "rz-012": "Built-up escarpment above Gangtok town.",
         "rz-013": "Red-soil hill slopes in Dhalai district.",
+        "rz-014": "Steep Kinnaur valleys along NH-5; seismic and glacial overprint.",
+        "rz-015": "Shimla ridge slopes cut by urban expansion and road works.",
+        "rz-016": "Joshimath subsidence-prone slopes above the Alaknanda valley.",
+        "rz-017": "Kedarnath valley slopes scoured by the 2013 disaster terrain.",
+        "rz-018": "Kishtwar hill slopes above the Chenab with monsoon slips.",
+        "rz-019": "Kashmir valley margins — lower monsoon rainfall, snowmelt driven.",
+        "rz-020": "Darjeeling tea slopes on weathered phyllite; intense SW monsoon.",
+        "rz-021": "Kalimpong ridges above the Teesta with road-cut instability.",
+        "rz-022": "Mahabaleshwar lateritic escarpment above the Krishna valley.",
+        "rz-023": "Raigad Sahyadri cut slopes above the Konkan coast.",
+        "rz-024": "Wayanad laterite slopes — 2024 Chooralmala–Mundakkai disaster belt.",
+        "rz-025": "Idukki high-range slopes with plantation cutting and extreme rain.",
+        "rz-026": "Kodagu coffee-slope failures above the Cauvery basin.",
+        "rz-027": "Nilgiri escarpment with toy-railway and hill-road cut slopes.",
     }
     return descs.get(zone["id"], f"Monitoring zone in {zone['district']}, {zone['state']}.")
 
@@ -341,8 +356,9 @@ def rainfall_vs_risk() -> list[dict]:
 # Sensor endpoints
 # ---------------------------------------------------------------------------
 
-# Sensor metadata for the 13 NER zones (one or two sensors per zone)
-_NER_SENSORS = [
+# Sensor metadata for the all-India monitoring zones (one per zone, plus a
+# few extra in the original NER pilot districts).
+_MONITORING_SENSORS = [
     {"id": "SNS-001", "name": "Aizawl Soil Moisture A", "type": "soil_moisture", "latitude": 23.74, "longitude": 92.72, "district": "Aizawl", "zone_id": "rz-007", "unit": "%"},
     {"id": "SNS-002", "name": "Mangan Rain Gauge", "type": "rainfall", "latitude": 27.52, "longitude": 88.54, "district": "Mangan", "zone_id": "rz-011", "unit": "mm/hr"},
     {"id": "SNS-003", "name": "Shillong Rainfall Gauge", "type": "rainfall", "latitude": 25.58, "longitude": 91.89, "district": "East Khasi Hills", "zone_id": "rz-005", "unit": "mm/hr"},
@@ -356,9 +372,26 @@ _NER_SENSORS = [
     {"id": "SNS-011", "name": "Dhalai Soil Moisture", "type": "soil_moisture", "latitude": 23.94, "longitude": 91.86, "district": "Dhalai", "zone_id": "rz-013", "unit": "%"},
     {"id": "SNS-012", "name": "Itanagar Rain Gauge", "type": "rainfall", "latitude": 27.11, "longitude": 93.63, "district": "Papum Pare", "zone_id": "rz-002", "unit": "mm/hr"},
     {"id": "SNS-013", "name": "Phek Tilt Sensor", "type": "tilt", "latitude": 25.67, "longitude": 94.45, "district": "Phek", "zone_id": "rz-010", "unit": "°"},
+    # ---- Himachal / Uttarakhand / J&K ----
+    {"id": "SNS-014", "name": "Kalpa Tilt Sensor", "type": "tilt", "latitude": 31.53, "longitude": 78.26, "district": "Kinnaur", "zone_id": "rz-014", "unit": "°"},
+    {"id": "SNS-015", "name": "Shimla Rain Gauge", "type": "rainfall", "latitude": 31.10, "longitude": 77.17, "district": "Shimla", "zone_id": "rz-015", "unit": "mm/hr"},
+    {"id": "SNS-016", "name": "Joshimath Moisture", "type": "soil_moisture", "latitude": 30.55, "longitude": 79.56, "district": "Chamoli", "zone_id": "rz-016", "unit": "%"},
+    {"id": "SNS-017", "name": "Rudraprayag Rain Gauge", "type": "rainfall", "latitude": 30.26, "longitude": 79.06, "district": "Rudraprayag", "zone_id": "rz-017", "unit": "mm/hr"},
+    {"id": "SNS-018", "name": "Kishtwar Rain Gauge", "type": "rainfall", "latitude": 33.31, "longitude": 75.77, "district": "Kishtwar", "zone_id": "rz-018", "unit": "mm/hr"},
+    {"id": "SNS-019", "name": "Anantnag Soil Moisture", "type": "soil_moisture", "latitude": 33.73, "longitude": 75.15, "district": "Anantnag", "zone_id": "rz-019", "unit": "%"},
+    # ---- Darjeeling Himalaya ----
+    {"id": "SNS-020", "name": "Darjeeling Rainfall", "type": "rainfall", "latitude": 27.04, "longitude": 88.26, "district": "Darjeeling", "zone_id": "rz-020", "unit": "mm/hr"},
+    {"id": "SNS-021", "name": "Kalimpong Moisture", "type": "soil_moisture", "latitude": 27.22, "longitude": 88.47, "district": "Kalimpong", "zone_id": "rz-021", "unit": "%"},
+    # ---- Western Ghats ----
+    {"id": "SNS-022", "name": "Mahabaleshwar Rain Gauge", "type": "rainfall", "latitude": 17.93, "longitude": 73.66, "district": "Satara", "zone_id": "rz-022", "unit": "mm/hr"},
+    {"id": "SNS-023", "name": "Mahad Moisture", "type": "soil_moisture", "latitude": 18.09, "longitude": 73.40, "district": "Raigad", "zone_id": "rz-023", "unit": "%"},
+    {"id": "SNS-024", "name": "Wayanad Soil Moisture", "type": "soil_moisture", "latitude": 11.68, "longitude": 76.13, "district": "Wayanad", "zone_id": "rz-024", "unit": "%"},
+    {"id": "SNS-025", "name": "Munnar Tilt Sensor", "type": "tilt", "latitude": 9.85, "longitude": 76.97, "district": "Idukki", "zone_id": "rz-025", "unit": "°"},
+    {"id": "SNS-026", "name": "Madikeri Rain Gauge", "type": "rainfall", "latitude": 12.42, "longitude": 75.74, "district": "Kodagu", "zone_id": "rz-026", "unit": "mm/hr"},
+    {"id": "SNS-027", "name": "Nilgiris Soil Moisture", "type": "soil_moisture", "latitude": 11.41, "longitude": 76.69, "district": "The Nilgiris", "zone_id": "rz-027", "unit": "%"},
 ]
 
-_SENSOR_INDEX = {s["id"]: s for s in _NER_SENSORS}
+_SENSOR_INDEX = {s["id"]: s for s in _MONITORING_SENSORS}
 
 
 def _build_sensor_reading(sensor_meta: dict) -> dict:
@@ -426,7 +459,7 @@ def _mock_battery(sensor_id: str) -> int:
 
 @router.get("/sensors")
 def list_sensors() -> list[dict]:
-    return [_build_sensor_reading(s) for s in _NER_SENSORS]
+    return [_build_sensor_reading(s) for s in _MONITORING_SENSORS]
 
 
 @router.get("/sensors/{sensor_id}")
@@ -593,6 +626,115 @@ def _get_roads() -> list[dict]:
             "lastUpdated": _utcnow().isoformat(),
             "coordinates": [[25.51, 90.22], [25.53, 90.25], [25.55, 90.29]],
         },
+        {
+            "id": "rd-009",
+            "name": "NH-5 Kinnaur Section",
+            "from": "Shimla",
+            "to": "Kalpa",
+            "district": "Kinnaur",
+            "status": _status_from_risk("rz-014", "partially_blocked"),
+            "reason": "NH-5 hill-cut slopes — risk-driven status",
+            "lastUpdated": _utcnow().isoformat(),
+            "alternativeRoute": "Shimla–Kinnaur via Reckong Peo where open",
+            "coordinates": [[31.10, 77.17], [31.35, 77.75], [31.53, 78.26]],
+        },
+        {
+            "id": "rd-010",
+            "name": "NH-7 Joshimath–Badrinath",
+            "from": "Joshimath",
+            "to": "Badrinath",
+            "district": "Chamoli",
+            "status": _status_from_risk("rz-016", "partially_blocked"),
+            "reason": "Subsidence-prone slopes above Alaknanda",
+            "lastUpdated": _utcnow().isoformat(),
+            "alternativeRoute": "Cargo road via Pipalkoti where open",
+            "coordinates": [[30.55, 79.56], [30.65, 79.40], [30.74, 79.27]],
+        },
+        {
+            "id": "rd-011",
+            "name": "NH-244 Kishtwar–Batote",
+            "from": "Kishtwar",
+            "to": "Batote",
+            "district": "Kishtwar",
+            "status": _status_from_risk("rz-018", "open"),
+            "lastUpdated": _utcnow().isoformat(),
+            "coordinates": [[33.31, 75.77], [33.20, 75.40], [33.10, 75.10]],
+        },
+        {
+            "id": "rd-012",
+            "name": "NH-717 Siliguri–Darjeeling",
+            "from": "Siliguri",
+            "to": "Darjeeling",
+            "district": "Darjeeling",
+            "status": _status_from_risk("rz-020", "partially_blocked"),
+            "reason": "Teesta banking slides in monsoon",
+            "lastUpdated": _utcnow().isoformat(),
+            "alternativeRoute": "NH-31C via Kalimpong where open",
+            "coordinates": [[26.72, 88.42], [26.90, 88.30], [27.04, 88.26]],
+        },
+        {
+            "id": "rd-013",
+            "name": "NH-66 Kolad–Mahad",
+            "from": "Kolad",
+            "to": "Mahad",
+            "district": "Raigad",
+            "status": _status_from_risk("rz-023", "open"),
+            "lastUpdated": _utcnow().isoformat(),
+            "coordinates": [[18.46, 73.15], [18.25, 73.27], [18.09, 73.40]],
+        },
+        {
+            "id": "rd-014",
+            "name": "Mahabaleshwar–Panchgani Ghat Road",
+            "from": "Mahabaleshwar",
+            "to": "Panchgani",
+            "district": "Satara",
+            "status": _status_from_risk("rz-022", "open"),
+            "lastUpdated": _utcnow().isoformat(),
+            "coordinates": [[17.93, 73.66], [17.92, 73.80], [17.98, 73.93]],
+        },
+        {
+            "id": "rd-015",
+            "name": "NH-766 Kalpetta–Sultan Bathery",
+            "from": "Kalpetta",
+            "to": "Sultan Bathery",
+            "district": "Wayanad",
+            "status": _status_from_risk("rz-024", "fully_blocked"),
+            "reason": "Chooralmala–Mundakkai belt — debris flow zone",
+            "lastUpdated": _utcnow().isoformat(),
+            "alternativeRoute": "NH-766 via Meppadi where open",
+            "coordinates": [[11.68, 76.13], [11.60, 76.20], [11.55, 76.32]],
+        },
+        {
+            "id": "rd-016",
+            "name": "NH-85 Adimali–Munnar",
+            "from": "Adimali",
+            "to": "Munnar",
+            "district": "Idukki",
+            "status": _status_from_risk("rz-025", "open"),
+            "lastUpdated": _utcnow().isoformat(),
+            "coordinates": [[10.11, 76.96], [10.00, 76.96], [9.85, 76.97]],
+        },
+        {
+            "id": "rd-017",
+            "name": "NH-275 Madikeri–Virajpet",
+            "from": "Madikeri",
+            "to": "Virajpet",
+            "district": "Kodagu",
+            "status": _status_from_risk("rz-026", "open"),
+            "lastUpdated": _utcnow().isoformat(),
+            "coordinates": [[12.42, 75.74], [12.35, 75.85], [12.28, 75.97]],
+        },
+        {
+            "id": "rd-018",
+            "name": "NH-181 Ooty–Gudalur",
+            "from": "Ooty",
+            "to": "Gudalur",
+            "district": "The Nilgiris",
+            "status": _status_from_risk("rz-027", "partially_blocked"),
+            "reason": "Ghat hairpins cut into weathered slopes",
+            "lastUpdated": _utcnow().isoformat(),
+            "coordinates": [[11.41, 76.69], [11.45, 76.55], [11.52, 76.45]],
+        },
     ]
     return roads
 
@@ -727,6 +869,96 @@ _HISTORICAL_EVENTS = [
         "triggers": ["Red soil erosion", "Monsoon rainfall"],
         "areaAffected": 0.2,
     },
+    {
+        "id": "he-009",
+        "name": "Kedarnath Disaster",
+        "date": "2013-06-17",
+        "district": "Rudraprayag",
+        "state": "Uttarakhand",
+        "severity": "severe",
+        "casualties": 4000,
+        "displaced": 100000,
+        "description": "Cloudburst and glacial-lake outburst triggered floods and debris flows in the Mandakini valley; over 4,000 deaths reported.",
+        "latitude": 30.73,
+        "longitude": 79.07,
+        "triggers": ["Cloudburst", "GLOF", "Unregulated pilgrim traffic"],
+        "areaAffected": 12.0,
+    },
+    {
+        "id": "he-010",
+        "name": "Malpa Landslide",
+        "date": "1998-08-07",
+        "district": "Pithoragarh",
+        "state": "Uttarakhand",
+        "severity": "severe",
+        "casualties": 209,
+        "displaced": 1200,
+        "description": "Two villages of Malpa were buried by a massive debris slide during the Amarnath yatra season; 209 killed.",
+        "latitude": 30.03,
+        "longitude": 80.35,
+        "triggers": ["Extreme rainfall", "Loose debris terrain"],
+        "areaAffected": 2.4,
+    },
+    {
+        "id": "he-011",
+        "name": "Wayanad Chooralmala–Mundakkai Slides",
+        "date": "2024-07-30",
+        "district": "Wayanad",
+        "state": "Kerala",
+        "severity": "severe",
+        "casualties": 231,
+        "displaced": 5000,
+        "description": "Pre-dawn debris flows wiped out Chooralmala and Mundakkai after days of extreme rain; at least 231 deaths.",
+        "latitude": 11.65,
+        "longitude": 76.17,
+        "triggers": ["Extreme rainfall", "Lateritic soil saturation", "Steep gullies"],
+        "areaAffected": 5.5,
+    },
+    {
+        "id": "he-012",
+        "name": "South Lhonak Lake Outburst & Teesta Floods",
+        "date": "2023-10-04",
+        "district": "Mangan",
+        "state": "Sikkim",
+        "severity": "severe",
+        "casualties": 87,
+        "displaced": 800,
+        "description": "Lake outburst above South Lhonak sent floods and debris down the Teesta, damaging NH-10 and power projects.",
+        "latitude": 27.91,
+        "longitude": 88.20,
+        "triggers": ["GLOF", "Cloudburst", "Moraine dam breach"],
+        "areaAffected": 8.0,
+    },
+    {
+        "id": "he-013",
+        "name": "Joshimath Subsidence",
+        "date": "2023-01-06",
+        "district": "Chamoli",
+        "state": "Uttarakhand",
+        "severity": "moderate",
+        "casualties": 0,
+        "displaced": 3000,
+        "description": "Ground subsidence cracked hundreds of houses in Joshimath; around 600 families were relocated.",
+        "latitude": 30.55,
+        "longitude": 79.56,
+        "triggers": ["Slope creep", "Construction loading", "Loose sediment terrain"],
+        "areaAffected": 1.2,
+    },
+    {
+        "id": "he-014",
+        "name": "Kalimpong–Teesta Bank Slides",
+        "date": "2022-06-17",
+        "district": "Kalimpong",
+        "state": "West Bengal",
+        "severity": "moderate",
+        "casualties": 6,
+        "displaced": 240,
+        "description": "Monsoon slides along Teesta banking roads severed Kalimpong's connectivity for several days.",
+        "latitude": 27.22,
+        "longitude": 88.47,
+        "triggers": ["Continuous rainfall", "Road-cut slopes"],
+        "areaAffected": 0.4,
+    },
 ]
 
 
@@ -823,6 +1055,58 @@ def emergency_zones() -> list[dict]:
             "latitude": 25.16,
             "longitude": 93.02,
         },
+        {
+            "id": "ez-006",
+            "name": "Joshimath–Chamoli Zone",
+            "zone_id": "rz-016",
+            "district": "Chamoli",
+            "populationAtRisk": 60000,
+            "priorityRank": 6,
+            "infrastructureImpact": ["NH-7 Char Dham", "Tapovan Vishnugad HEP", "Water supply", "Schools (12)"],
+            "hospitals": 1,
+            "shelters": 4,
+            "latitude": 30.55,
+            "longitude": 79.56,
+        },
+        {
+            "id": "ez-007",
+            "name": "Wayanad Ghat Zone",
+            "zone_id": "rz-024",
+            "district": "Wayanad",
+            "populationAtRisk": 120000,
+            "priorityRank": 7,
+            "infrastructureImpact": ["NH-766", "Puzhithara bridge", "Plantations", "Schools (18)"],
+            "hospitals": 2,
+            "shelters": 9,
+            "latitude": 11.68,
+            "longitude": 76.13,
+        },
+        {
+            "id": "ez-008",
+            "name": "Kinnaur NH-5 Zone",
+            "zone_id": "rz-014",
+            "district": "Kinnaur",
+            "populationAtRisk": 40000,
+            "priorityRank": 8,
+            "infrastructureImpact": ["NH-5", "Sutlej bridges", "Power lines"],
+            "hospitals": 1,
+            "shelters": 3,
+            "latitude": 31.53,
+            "longitude": 78.26,
+        },
+        {
+            "id": "ez-009",
+            "name": "Darjeeling Hills Zone",
+            "zone_id": "rz-020",
+            "district": "Darjeeling",
+            "populationAtRisk": 150000,
+            "priorityRank": 9,
+            "infrastructureImpact": ["NH-717", "Toy railway", "Tea estates", "Schools (22)"],
+            "hospitals": 2,
+            "shelters": 6,
+            "latitude": 27.04,
+            "longitude": 88.26,
+        },
     ]
 
     result = []
@@ -912,9 +1196,25 @@ def notification_stats() -> dict:
 
 @router.post("/weather/refresh")
 def refresh_weather() -> dict:
-    """Fetch latest Open-Meteo data for all NER zones and update live inputs."""
+    """Fetch latest Open-Meteo data (current + 3-day forecast) for all zones."""
     try:
         result = openmeteo_provider.ingest_all_zones()
-        return {"ok": True, **result}
+        forecast = openmeteo_provider.ingest_forecast_all_zones()
+        return {"ok": True, **result, "forecast": forecast}
     except Exception as exc:
         return {"ok": False, "error": str(exc), "updated": 0}
+
+
+# ---------------------------------------------------------------------------
+# Live seismicity (USGS feed, no API key)
+# ---------------------------------------------------------------------------
+
+@router.get("/seismic/live")
+def live_seismic(min_magnitude: float = Query(default=2.5, ge=0, le=10)) -> dict:
+    """Recent earthquakes in the India study area from the USGS feed.
+
+    Seismic preconditioning (pga) is a LHASA model input, so live quakes
+    next to a monitored zone are shown on the GIS map as situational
+    awareness. Empty list when the feed is unreachable.
+    """
+    return seismic_provider.recent_earthquakes(min_magnitude=min_magnitude)

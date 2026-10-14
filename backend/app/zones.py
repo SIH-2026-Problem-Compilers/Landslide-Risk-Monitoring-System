@@ -1,9 +1,13 @@
-"""Monitoring zones for the North Eastern Region (India).
+"""Monitoring zones across India's landslide-prone belt.
 
-These zones are mirrored from the React frontend mock data so ids and names
-match what is rendered on the map and the predictions page. They cover all
-eight NER states (one pilot district per state, a few states get two), which
-is the pilot geography for the early-warning platform.
+Two groups, ids are stable and mirrored by the React frontend mock data so
+the map/predictions views always match the API:
+
+  rz-001..rz-013  North Eastern Region (8 states: Arunachal, Assam, Manipur,
+                  Meghalaya, Mizoram, Nagaland, Sikkim, Tripura)
+  rz-014..rz-027  Rest of the Indian hazard belt: Himachal Pradesh,
+                  Uttarakhand, Jammu & Kashmir, West Bengal (Darjeeling),
+                  Maharashtra (Western Ghats), Kerala, Karnataka, Tamil Nadu
 
 LHASA outputs a global probability raster; the API samples it (or scores the
 model) at each zone's coordinates.
@@ -135,6 +139,140 @@ MONITORING_ZONES: list[dict] = [
         "latitude": 23.93,
         "longitude": 91.85,
         "population": 378000,
+    },
+    # ---- Himachal Pradesh ----
+    {
+        "id": "rz-014",
+        "name": "Kinnaur Valleys",
+        "district": "Kinnaur",
+        "state": "Himachal Pradesh",
+        "latitude": 31.53,
+        "longitude": 78.26,
+        "population": 84000,
+    },
+    {
+        "id": "rz-015",
+        "name": "Shimla Ridge",
+        "district": "Shimla",
+        "state": "Himachal Pradesh",
+        "latitude": 31.10,
+        "longitude": 77.17,
+        "population": 187000,
+    },
+    # ---- Uttarakhand ----
+    {
+        "id": "rz-016",
+        "name": "Joshimath Slopes",
+        "district": "Chamoli",
+        "state": "Uttarakhand",
+        "latitude": 30.55,
+        "longitude": 79.56,
+        "population": 138000,
+    },
+    {
+        "id": "rz-017",
+        "name": "Kedarnath Valley",
+        "district": "Rudraprayag",
+        "state": "Uttarakhand",
+        "latitude": 30.26,
+        "longitude": 79.06,
+        "population": 106000,
+    },
+    # ---- Jammu & Kashmir ----
+    {
+        "id": "rz-018",
+        "name": "Kishtwar Hills",
+        "district": "Kishtwar",
+        "state": "Jammu and Kashmir",
+        "latitude": 33.31,
+        "longitude": 75.77,
+        "population": 119000,
+    },
+    {
+        "id": "rz-019",
+        "name": "Anantnag Valleys",
+        "district": "Anantnag",
+        "state": "Jammu and Kashmir",
+        "latitude": 33.73,
+        "longitude": 75.15,
+        "population": 900000,
+    },
+    # ---- West Bengal (Darjeeling Himalaya) ----
+    {
+        "id": "rz-020",
+        "name": "Darjeeling Himalaya",
+        "district": "Darjeeling",
+        "state": "West Bengal",
+        "latitude": 27.04,
+        "longitude": 88.26,
+        "population": 1500000,
+    },
+    {
+        "id": "rz-021",
+        "name": "Kalimpong Ridges",
+        "district": "Kalimpong",
+        "state": "West Bengal",
+        "latitude": 27.22,
+        "longitude": 88.47,
+        "population": 150000,
+    },
+    # ---- Maharashtra (Western Ghats / Konkan escarpment) ----
+    {
+        "id": "rz-022",
+        "name": "Mahabaleshwar Escarpment",
+        "district": "Satara",
+        "state": "Maharashtra",
+        "latitude": 17.93,
+        "longitude": 73.66,
+        "population": 100000,
+    },
+    {
+        "id": "rz-023",
+        "name": "Raigad Sahyadri",
+        "district": "Raigad",
+        "state": "Maharashtra",
+        "latitude": 18.09,
+        "longitude": 73.40,
+        "population": 1000000,
+    },
+    # ---- Kerala (Western Ghats) ----
+    {
+        "id": "rz-024",
+        "name": "Wayanad Ghats",
+        "district": "Wayanad",
+        "state": "Kerala",
+        "latitude": 11.68,
+        "longitude": 76.13,
+        "population": 817000,
+    },
+    {
+        "id": "rz-025",
+        "name": "Idukki High Ranges",
+        "district": "Idukki",
+        "state": "Kerala",
+        "latitude": 9.85,
+        "longitude": 76.97,
+        "population": 1100000,
+    },
+    # ---- Karnataka ----
+    {
+        "id": "rz-026",
+        "name": "Kodagu Hills",
+        "district": "Kodagu",
+        "state": "Karnataka",
+        "latitude": 12.42,
+        "longitude": 75.74,
+        "population": 545000,
+    },
+    # ---- Tamil Nadu ----
+    {
+        "id": "rz-027",
+        "name": "Nilgiri Slopes",
+        "district": "The Nilgiris",
+        "state": "Tamil Nadu",
+        "latitude": 11.41,
+        "longitude": 76.69,
+        "population": 735000,
     },
 ]
 

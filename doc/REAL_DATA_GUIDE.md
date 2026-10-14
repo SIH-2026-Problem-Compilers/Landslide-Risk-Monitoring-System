@@ -57,10 +57,13 @@ the frontend is derived from that single value:
 
 ### 1.4 Where the sample (demo) data lives today
 
-`backend/app/scorer.py` contains `ZONE_PARAMS` — one row per monitored Nepal
-zone with sample `lithology`, `slope`, `pga`, `wetness`, `rain` values. The
-API scores the real model with those vectors and every returned record carries
-the factor *"Sample inputs — demo mode (no live NASA data)"*.
+`backend/app/scorer.py` contains `ZONE_PARAMS` — one row per monitored Indian
+zone (27 zones: North East + Himalaya + Western Ghats) with sample
+`lithology`, `slope`, `pga`, `wetness`, `rain` values, calibrated so the real
+model spreads across all four severity bands. Whenever live inputs exist
+(Open-Meteo at startup, IMD feed, sensor readings) they **override** the
+sample rain/wetness, and the factor changes to *"Live IMD/sensor inputs"*.
+Every other record carries the factor *"Sample inputs — demo mode"*.
 
 ---
 
@@ -96,7 +99,7 @@ trained model file and is explained in §5.
    `GET /api/v1/health` lists exactly which are present/missing.
 4. **A "when" and "where"** — each run models a specific UTC product time
    (`-d "YYYY-MM-DD HH:MM"`) over a bounding box (`-N/-S/-E/-W`). This
-   project defaults to Nepal: N 31 / S 26 / E 89 / W 80.
+   project defaults to all-India: N 36.5 / S 6.5 / E 97.5 / W 68.
 
 ---
 
@@ -124,7 +127,7 @@ echo "HTTP.COOKIEJAR=~/.urs_cookies" >> ~/.dodsrc
 ```
 
 **Step 3 — Start a run through the API.** The backend launches `lhasa.py` in
-the background (Nepal bbox, nowcast + 3 forecast days):
+the background (India bbox, nowcast + 3 forecast days):
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/ml/runs \
@@ -199,7 +202,7 @@ service grid) instead of NASA satellite downloads.
 - Rainfall values are used both raw (antecedent) and normalized by the local
   99th-percentile map (current-day rain), so **units must be millimetres**.
 
-### 4.2 Example command (nowcast only, Nepal box)
+### 4.2 Example command (nowcast only, India box)
 
 ```bash
 conda activate lhasa
@@ -210,7 +213,7 @@ python LHASA/lhasa.py \
   -l  0 \
   -f  nc4 \
   -o \
-  -N  31 -S 26 -E 89 -W 80 \
+  -N  36.5 -S 6.5 -E 97.5 -W 68 \
   -cf ./data/rain_today.tif \
   -af ./data/rain_last2days.tif \
   -mf ./data/soil_moisture.tif
@@ -255,20 +258,24 @@ real sensor readings and the model is scored on your data:
 
 ### 5.2 Zone ↔ sensor mapping
 
-Each monitored zone has a district; the frontend mock data already pairs them:
+Each monitored zone has a district; sensors are declared once in
+`backend/app/routers/live.py` (`_MONITORING_SENSORS`, mirrored by
+`frontend/src/data/mockData.ts`). Every zone rz-001…rz-027 has at least one
+sensor; examples:
 
-| Zone | District | Rainfall sensor | Soil-moisture sensor |
-|---|---|---|---|
-| rz-001 Sindhupalchok North | Sindhupalchok | — | SNS-001 |
-| rz-002 Dolakha Ridge | Dolakha | SNS-002 | — |
-| rz-003 Makwanpur Valley | Makwanpur | — | SNS-004 |
-| rz-004 Gorkha Hills | Gorkha | SNS-005 (temp) | — |
-| rz-005 Nuwakot Lowlands | Nuwakot | — | — |
-| rz-006 Rasuwa Corridor | Rasuwa | — | SNS-003 (tilt) |
-| rz-007 Dhading Terraces | Dhading | SNS-006 | — |
-| rz-008 Sindhuli Slopes | Sindhuli | — | — |
-| rz-009 Kavre Highlands | Kavrepalanchok | — | SNS-008 |
-| rz-010 Ramechhap Basin | Ramechhap | — | SNS-010 |
+| Zone | District | Sensor(s) |
+|---|---|---|
+| rz-001 Bomdila Slopes | West Kameng | SNS-010 (rainfall) |
+| rz-005 Shillong Plateau Edge | East Khasi Hills | SNS-003 (rainfall) |
+| rz-007 Aizawl Escarpment | Aizawl | SNS-001 (soil moisture) |
+| rz-011 Mangan NH-10 Corridor | Mangan | SNS-002 (rainfall) |
+| rz-014 Kinnaur Valleys | Kinnaur | SNS-014 (tilt) |
+| rz-016 Joshimath Slopes | Chamoli | SNS-016 (soil moisture) |
+| rz-020 Darjeeling Himalaya | Darjeeling | SNS-020 (rainfall) |
+| rz-024 Wayanad Ghats | Wayanad | SNS-024 (soil moisture) |
+| rz-027 Nilgiri Slopes | The Nilgiris | SNS-027 (soil moisture) |
+
+*(Full list: `_MONITORING_SENSORS` in `backend/app/routers/live.py`.)*
 
 ### 5.3 How to wire it
 
@@ -283,16 +290,20 @@ Minimal version — edit `ZONE_PARAMS` in `backend/app/scorer.py`, e.g.:
 Restart the server; `GET /api/v1/ml/predictions` now reflects real readings
 (keep `LHASA_DEMO=1` — the model is real; only the "live" columns are yours).
 
-Production version — don't hardcode. Recommended API shape (not yet
-implemented):
+Production version — don't hardcode. It is **already implemented**: IoT
+gateways push readings and the scorer picks them up on the next prediction:
 
 ```
-POST /api/v1/data/readings   {"zoneId": "rz-001", "rain_mm": 38, "wetness": 0.62}
+POST /api/v1/sensors/readings
+     {"sensor_id": "SNS-010", "zone_id": "rz-001",
+      "sensor_type": "rainfall", "value": 38, "unit": "mm"}
 GET  /api/v1/ml/predictions   # scorer reads latest readings per zone
 ```
 
-`antecedent` can be computed server-side as the rolling 2-day sum of stored
-`rain_mm` readings, giving a genuinely time-aware nowcast.
+A rainfall push updates the zone's `rain`, a soil-moisture push (percent →
+0–1) updates `wetness` (`backend/app/inputs.py`), and prediction factors flip
+to *"Live IMD/sensor inputs"*. See
+[`INDIA_LIVE_DATA_APIS.md`](INDIA_LIVE_DATA_APIS.md) for every live source.
 
 ### 5.4 Practical notes
 
@@ -332,7 +343,8 @@ files are missing.
 | `backend/app/runner.py` | Runs `lhasa.py` per API run, manages output dirs |
 | `backend/app/output_reader.py` | Reads netCDF hazard files, samples zones |
 | `backend/app/scorer.py` | Demo/sensor scoring path + `ZONE_PARAMS` samples |
-| `backend/app/zones.py` | The 10 monitored Nepal zones (ids, names, coordinates) |
+| `backend/app/zones.py` | The 27 monitored Indian zones (ids, names, coordinates) |
+| `doc/INDIA_LIVE_DATA_APIS.md` | Every live-data API for India: signup, cost, env vars, integration points |
 | `backend/app/main.py` | Endpoints + real-vs-demo resolution |
 | `backend/.lhasa_runs/<id>/` | Output netCDFs of each real API run |
 

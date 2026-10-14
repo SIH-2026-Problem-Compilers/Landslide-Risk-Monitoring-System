@@ -94,6 +94,57 @@ def ingest_zone(zone_id: str, lat: float, lon: float) -> dict:
     return {"zone_id": zone_id, "status": "ok", "rain_mm": rain, "wetness": wetness}
 
 
+# ---------------------------------------------------------------------------
+# 3-day forecast rainfall (fills Forecast.rainfall with real mm values)
+# ---------------------------------------------------------------------------
+def _fetch_forecast(lat: float, lon: float) -> dict | None:
+    """Daily precipitation_sum for today + 3 forecast days."""
+    params = urllib.parse.urlencode(
+        {
+            "latitude": lat,
+            "longitude": lon,
+            "daily": "precipitation_sum",
+            "forecast_days": 4,
+            "timezone": "auto",
+        }
+    )
+    url = f"{OPEN_METEO_BASE}/v1/forecast?{params}"
+    try:
+        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, json.JSONDecodeError, OSError):
+        return None
+
+
+def ingest_zone_forecast(zone_id: str, lat: float, lon: float) -> dict:
+    """Store 24h/48h/72h forecast rainfall (mm) for one zone.
+
+    daily.precipitation_sum[0] is today, so index 1..3 are the +24h, +48h and
+    +72h forecast days used by the frontend forecast cards.
+    """
+    data = _fetch_forecast(lat, lon)
+    if data is None:
+        return {"zone_id": zone_id, "status": "fetch_failed"}
+    sums = (data.get("daily") or {}).get("precipitation_sum") or []
+    stored = 0
+    for index, period in enumerate(("24h", "48h", "72h"), start=1):
+        if index < len(sums) and sums[index] is not None:
+            inputs.set_forecast(zone_id, period, float(sums[index]))
+            stored += 1
+    return {"zone_id": zone_id, "status": "ok" if stored else "no_data", "periods": stored}
+
+
+def ingest_forecast_all_zones() -> dict:
+    """Fetch forecast rainfall for every zone (called at startup + refresh)."""
+    results = [
+        ingest_zone_forecast(zone["id"], zone["latitude"], zone["longitude"])
+        for zone in zones.MONITORING_ZONES
+    ]
+    ok = sum(1 for r in results if r.get("status") == "ok")
+    return {"total": len(results), "updated": ok, "failed": len(results) - ok}
+
+
 def ingest_all_zones() -> dict:
     """Fetch Open-Meteo data for every NER monitoring zone and store results.
 

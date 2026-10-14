@@ -60,7 +60,7 @@ export function EmergencyPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        {/* Emergency Map — NER centered */}
+        {/* Emergency Map — India centered */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ height: '400px' }}>
           <div className="p-3 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-800">Emergency Zones Map</h3>
@@ -70,8 +70,8 @@ export function EmergencyPage() {
             </span>
           </div>
           <MapContainer
-            center={[26.0, 92.7]}
-            zoom={6}
+            center={[22.5, 82.0]}
+            zoom={5}
             style={{ height: 'calc(100% - 44px)', width: '100%' }}
             scrollWheelZoom={true}
           >

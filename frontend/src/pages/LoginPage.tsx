@@ -52,7 +52,7 @@ export function LoginPage() {
               <Mountain className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">NER</h1>
+              <h1 className="text-2xl font-bold text-white">India</h1>
               <p className="text-sm text-capri-light">Landslide Monitoring System</p>
             </div>
           </div>
@@ -88,7 +88,7 @@ export function LoginPage() {
             <div className="w-10 h-10 bg-aztec rounded-xl flex items-center justify-center">
               <Mountain className="w-6 h-6 text-white" />
             </div>
-            <span className="font-bold text-aztec text-xl">NER</span>
+            <span className="font-bold text-aztec text-xl">India</span>
           </div>
 
           <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>

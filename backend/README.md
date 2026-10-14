@@ -56,7 +56,7 @@ Environment variables (all optional):
 # 1. Health / readiness — tells you what LHASA data is present
 curl http://127.0.0.1:8000/api/v1/health
 
-# 2. Start a nowcast + 3 forecast days over Nepal (default study area)
+# 2. Start a nowcast + 3 forecast days over India (default study area)
 curl -X POST http://127.0.0.1:8000/api/v1/ml/runs \
      -H "Content-Type: application/json" \
      -d '{"lead": 3}'
@@ -72,9 +72,17 @@ curl http://127.0.0.1:8000/api/v1/ml/recommendations
 
 Notes on output conversion: only `p_landslide` (rainfall-triggered
 probability) is a genuine LHASA product. `riskScore` = probability × 100,
-`severity` uses LHASA's 0.1/0.5/0.9 thresholds, `confidence` is a
-distance-from-0.5 heuristic, and forecast `rainfall` is `null` because the
-hazard product does not store precipitation amounts.
+`severity` uses LHASA's 0.1/0.5/0.9 thresholds, and `confidence` is a
+distance-from-0.5 heuristic. The LHASA hazard product does not store
+precipitation amounts, so forecast `rainfall` is filled from the live
+Open-Meteo 3-day forecast ingest whenever it is reachable.
+
+Outside real runs, the server is fully live with zero signup: Open-Meteo
+current + forecast weather feeds every zone (`providers/openmeteo.py`), the
+USGS feed powers `GET /api/v1/seismic/live`, and IoT gateways push real
+sensor readings to `POST /api/v1/sensors/readings` (see
+[`../doc/IOT_INTEGRATION.md`](../doc/IOT_INTEGRATION.md) and
+[`../doc/INDIA_LIVE_DATA_APIS.md`](../doc/INDIA_LIVE_DATA_APIS.md)).
 
 For the full picture of how to feed **real data** into the model — NASA
 live satellite runs, user-supplied rainfall/moisture rasters, or your own

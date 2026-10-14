@@ -2,8 +2,9 @@
 
 The model needs terrain features (Lithology, Slope, pga, gwetprof, antecedent,
 rain). Without raster inputs we estimate them per grid cell from simple
-geographic heuristics and live zone data where available. The result is a
-coarse but model-derived risk surface that the GIS heatmap layer renders.
+geographic heuristics (all-India regions) and live zone data where
+available. The result is a coarse but model-derived risk surface that the
+GIS heatmap layer renders.
 """
 from __future__ import annotations
 
@@ -16,29 +17,38 @@ from . import config, inputs, zones
 
 MODEL_FEATURES = ["Lithology", "Slope", "pga", "gwetprof", "antecedent", "rain"]
 
-# Rough terrain heuristics for the NER region. Southern lowlands
-# (lat < 23) are flatter; the Himalayan front (25-28) is steep;
-# the plateau/shelf is moderate.
+# Rough terrain heuristics for the all-India hazard belt. Ordered rules:
+# high Himalaya -> sub-Himalaya -> NE plateau -> plains -> Western Ghats ->
+# Deccan -> Gujarat/west. Lithology codes are the same rough classes the
+# scorer uses (4 laterite/basalt, 5 sandstone/shale, 6 phyllite/schist,
+# 7 gneiss/high mountains).
 def _estimate_terrain(lat: float, lon: float) -> tuple[int, float, float]:
-    """Estimate (lithology, slope_deg, pga) from position."""
-    # Lithology codes: 4 (red laterite, Tripura/Assam plains)
-    # 5 (sandstone/shale mix, mid-NE)
-    # 6 (phyllite/schist, Himalayan front)
-    # 7 (gneiss, high mountains)
-    if lat > 27.5:
-        lithology, slope, pga = 7, 34, 0.02
-    elif lat > 26:
-        lithology, slope, pga = 6, 30, 0.015
-    elif lat > 24.5:
-        lithology, slope, pga = 6, 26, 0.01
-    elif lat > 23:
-        lithology, slope, pga = 5, 22, 0.008
-    else:
-        lithology, slope, pga = 4, 14, 0.005
-    # Nudged by longitude (westerly areas slightly wetter/higher)
-    if lon < 92:
-        slope += 2
-    return lithology, slope, pga
+    """Estimate (lithology, slope_deg, pga) from position over India."""
+    # High Himalaya + Kashmir (steep, high seismicity)
+    if lat >= 30.0 and 73.0 <= lon <= 97.5:
+        return 7, 36, 0.50
+    # Himachal/Uttarakhand foothills, Nepal border, Darjeeling sub-Himalaya
+    if 26.0 <= lat < 30.0 and 73.0 <= lon <= 89.0:
+        return 6, 29, 0.42
+    # North East India (Shillong plateau, Arunachal, Manipur/Naga hills)
+    if 21.0 <= lat < 28.0 and 89.0 <= lon <= 97.5:
+        return 5, 27, 0.40
+    # Indo-Gangetic / Brahmaputra plains (low hazard baseline)
+    if 21.0 <= lat < 26.0 and 73.0 <= lon <= 89.0:
+        return 4, 6, 0.12
+    # Western Ghats escarpment (lon band through Kerala/Karnataka/Maharashtra)
+    if 7.0 <= lat < 23.0 and 72.5 <= lon <= 78.0:
+        return 5, 27, 0.08
+    # Deccan plateau / central India
+    if 12.0 <= lat < 23.0 and 73.0 <= lon <= 85.0:
+        return 4, 15, 0.07
+    # Southern peninsula (Nilgiris, Eastern Ghats)
+    if lat < 12.0 and 74.0 <= lon <= 80.0:
+        return 4, 14, 0.06
+    # Gujarat / arid west
+    if lon < 73.0:
+        return 4, 10, 0.15
+    return 5, 20, 0.20
 
 
 def _wetness_and_rain(lat: float, lon: float) -> tuple[float, float]:

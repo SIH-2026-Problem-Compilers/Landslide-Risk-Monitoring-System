@@ -10,6 +10,7 @@ import type { RiskLevel } from '../types';
 
 const states = [
   'All',
+  // North East India
   'Arunachal Pradesh',
   'Assam',
   'Manipur',
@@ -18,6 +19,15 @@ const states = [
   'Nagaland',
   'Sikkim',
   'Tripura',
+  // Himalaya + rest of the hazard belt
+  'Himachal Pradesh',
+  'Uttarakhand',
+  'Jammu and Kashmir',
+  'West Bengal',
+  'Maharashtra',
+  'Kerala',
+  'Karnataka',
+  'Tamil Nadu',
 ];
 
 const severities: { value: RiskLevel | 'all'; label: string }[] = [
@@ -28,7 +38,7 @@ const severities: { value: RiskLevel | 'all'; label: string }[] = [
   { value: 'low', label: 'Low' },
 ];
 
-const years = ['All', '2022', '2023', '2024', '2025'];
+const years = ['All', '2025', '2024', '2023', '2022', '2013', '1998'];
 
 export function HistoricalPage() {
   const [stateFilter, setStateFilter] = useState('All');
@@ -53,7 +63,7 @@ export function HistoricalPage() {
     <div>
       <PageHeader
         title="Historical Events"
-        subtitle="Timeline of past landslide events and their impact across NER"
+        subtitle="Timeline of past landslide events and their impact across India"
       />
 
       {/* Filters */}

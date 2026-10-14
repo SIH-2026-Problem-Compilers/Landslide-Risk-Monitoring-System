@@ -125,7 +125,7 @@ export function SettingsPage() {
             Live Data Sources
           </h3>
           <p className="text-xs text-gray-500 mb-4">
-            Real-time data status for the NER monitoring platform.
+            Real-time data status for the India landslide monitoring platform.
           </p>
           <div className="space-y-3">
             {/* Backend API */}

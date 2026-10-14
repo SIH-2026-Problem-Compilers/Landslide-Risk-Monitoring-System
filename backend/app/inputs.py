@@ -49,6 +49,47 @@ def set_live(
         return row
 
 
+def set_forecast(zone_id: str, period: str, rain_mm: float, source: str = "open-meteo") -> None:
+    """Upsert the stored forecast rainfall for a zone/period (24h|48h|72h)."""
+    from .models import ZoneForecast
+
+    with get_session() as session:
+        row = session.get(ZoneForecast, (zone_id, period))
+        if row is None:
+            row = ZoneForecast(zone_id=zone_id, period=period)
+            session.add(row)
+        row.rain_mm = max(0.0, float(rain_mm))
+        row.source = source
+        row.recorded_at = datetime.now(timezone.utc)
+        session.commit()
+
+
+def forecast_summary() -> dict[str, float]:
+    """Mean forecast rainfall (mm) across all zones per period.
+
+    Returns {"24h": 12.4, "48h": 8.1, "72h": 3.0} for periods that have at
+    least one stored value; missing periods are simply absent so callers can
+    leave Forecast.rainfall null.
+    """
+    from .models import ZoneForecast
+
+    try:
+        with get_session() as session:
+            rows = session.scalars(select(ZoneForecast)).all()
+    except Exception:
+        return {}
+    if not rows:
+        return {}
+    buckets: dict[str, list[float]] = {}
+    for row in rows:
+        buckets.setdefault(row.period, []).append(row.rain_mm)
+    return {
+        period: round(sum(values) / len(values), 1)
+        for period, values in buckets.items()
+        if values
+    }
+
+
 def refresh_zone_from_readings(zone_id: str) -> None:
     """Recompute a zone's live input from its latest stored sensor readings.
 

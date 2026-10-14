@@ -65,7 +65,7 @@ export function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard Overview"
-        subtitle="Real-time landslide risk monitoring across NER districts"
+        subtitle="Real-time landslide risk monitoring across India's hazard belt"
         actions={
           import.meta.env.VITE_SHOW_LIVE_BADGE === 'true' ? (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg">

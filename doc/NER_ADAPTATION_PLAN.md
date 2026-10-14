@@ -1,5 +1,12 @@
 # NER (North East India) Adaptation Plan
 
+> **Status (Oct 2026) — historical planning document.** Phase 0 (NER rebase)
+> and Phase 1 (real data loop: SQLite + sensor/IMD ingestion, Open-Meteo
+> live weather, auto-alerts) are **done**, and the platform has since been
+> widened from the NER pilot to all 27 India hazard-belt zones (see
+> `backend/app/zones.py`). Remaining phases (i18n UI, PWA/offline, cloud)
+> still apply. Live-data API catalogue: [`INDIA_LIVE_DATA_APIS.md`](INDIA_LIVE_DATA_APIS.md).
+
 > **Goal.** Adapt the current Nepal landslide-monitoring prototype into the
 > platform described in the *North Eastern Region (NER) early warning*
 > problem statement: an AI-enabled, real-time landslide monitoring and early

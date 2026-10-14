@@ -29,6 +29,23 @@ class ZoneInput(Base):
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+class ZoneForecast(Base):
+    """Stored weather forecast rainfall per zone per lead period.
+
+    Written by the Open-Meteo forecast ingest (24h/48h/72h precipitation)
+    and read by the forecasts endpoint so Forecast.rainfall is a real mm
+    value instead of null.
+    """
+
+    __tablename__ = "zone_forecasts"
+
+    zone_id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    period: Mapped[str] = mapped_column(String(8), primary_key=True)  # 24h|48h|72h
+    rain_mm: Mapped[float] = mapped_column(Float, default=0.0)
+    source: Mapped[str] = mapped_column(String(32), default="open-meteo")
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class SensorReading(Base):
     """A single telemetry push from an IoT sensor (rain / moisture / tilt)."""
 

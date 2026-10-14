@@ -53,15 +53,17 @@ app.include_router(data_router)
 app.include_router(live_router)
 init_database()
 
-# On startup, pull Open-Meteo weather for all NER zones so the model scorer
-# has real rain/wetness inputs from the very first prediction request.
+# On startup, pull Open-Meteo weather + 3-day forecast for all India zones so
+# the model scorer has real rain/wetness inputs and the forecast cards show
+# real rainfall from the very first request.
 import threading as _threading
 
 def _startup_weather_refresh() -> None:
-    """Background task: fetch Open-Meteo data for every NER zone."""
+    """Background task: fetch Open-Meteo data for every monitoring zone."""
     try:
         from .providers import openmeteo as _om
         _om.ingest_all_zones()
+        _om.ingest_forecast_all_zones()
     except Exception:
         pass  # Non-fatal — demo scorer fallback still works
 
@@ -112,18 +114,42 @@ def _latest_predictions() -> list[dict]:
 
 
 def _latest_forecasts() -> list[dict]:
-    """Forecast records: real run output, or demo-scored real model."""
+    """Forecast records: real run output, or demo-scored real model.
+
+    Rainfall for the 24/48/72h cards comes from the live Open-Meteo forecast
+    ingest (zone_forecasts table) so the cards show real mm values whenever
+    the weather feed is reachable.
+    """
     _, real_forecasts = _real_run_records()
     if real_forecasts:
-        return real_forecasts
-    if scorer.model_ready() and config.DEMO_ENABLED:
-        return scorer.forecasts()
-    raise HTTPException(
-        status_code=404,
-        detail="No completed LHASA run and no model to score. POST "
-        "/api/v1/ml/runs to start one (requires LHASA static data and "
-        "NASA data access).",
-    )
+        records = real_forecasts
+    elif scorer.model_ready() and config.DEMO_ENABLED:
+        records = scorer.forecasts()
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="No completed LHASA run and no model to score. POST "
+            "/api/v1/ml/runs to start one (requires LHASA static data and "
+            "NASA data access).",
+        )
+    return _with_forecast_rainfall(records)
+
+
+def _with_forecast_rainfall(records: list[dict]) -> list[dict]:
+    """Attach real forecast rainfall (mm) to each period when available."""
+    try:
+        from . import inputs as _inputs
+
+        summary = _inputs.forecast_summary()
+    except Exception:
+        summary = {}
+    if not summary:
+        return records
+    enriched: list[dict] = []
+    for record in records:
+        rain = summary.get(record.get("period", ""))
+        enriched.append({**record, "rainfall": rain if rain is not None else record.get("rainfall")})
+    return enriched
 
 
 def _recommendations_from(records: list[dict]) -> list[dict]:

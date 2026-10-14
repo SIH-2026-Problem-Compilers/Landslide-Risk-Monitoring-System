@@ -6,7 +6,7 @@
  * Fallback   : mockData
  *
  * The LHASA model runs server-side (Python XGBoost). The server scores the
- * real model.json with live Open-Meteo inputs for each NER zone on startup
+ * real model.json with live Open-Meteo inputs for each India zone on startup
  * and on every /weather/refresh call so predictions are always fresh.
  */
 import { predictions, forecasts, aiRecommendations } from '../data/mockData';

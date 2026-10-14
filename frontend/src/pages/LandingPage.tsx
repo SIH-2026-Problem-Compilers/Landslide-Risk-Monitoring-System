@@ -46,7 +46,7 @@ export function LandingPage() {
               <Mountain className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-aztec text-lg">NER</span>
+              <span className="font-bold text-aztec text-lg">India</span>
               <span className="text-gray-400 text-sm ml-2 hidden sm:inline">Landslide Monitoring</span>
             </div>
           </div>
@@ -369,7 +369,7 @@ export function LandingPage() {
               <div className="w-8 h-8 bg-capri rounded-lg flex items-center justify-center">
                 <Mountain className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold">NER</span>
+              <span className="font-bold">India</span>
               <span className="text-sm text-gray-400">AI-Based Landslide Risk Monitoring</span>
             </div>
             <p className="text-sm text-gray-500">

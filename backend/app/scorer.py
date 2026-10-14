@@ -3,9 +3,9 @@
 NASA's LHASA normally runs as a Python pipeline fed by satellite data that
 requires an Earthdata account and (for the published map server) IPv6. Until
 that is available, this module exercises the *actual* trained XGBoost model
-(LHASA/model.json) with clearly-labelled sample inputs for the Nepal
-monitoring zones, so the frontend shows genuine model output instead of mock
-data.
+(LHASA/model.json) with clearly-labelled sample inputs for the 27 Indian
+monitoring zones (North East + Himalaya + Western Ghats), so the frontend
+shows genuine model output instead of mock data.
 
 The sample inputs (soil wetness, rainfall) were calibrated so the real model
 produces a realistic spread across the four severity bands. Every record
@@ -29,25 +29,46 @@ from .zones import MONITORING_ZONES
 
 MODEL_FEATURES = ["Lithology", "Slope", "pga", "gwetprof", "antecedent", "rain"]
 
-# Sample inputs per NER monitoring zone, calibrated so the real XGBoost
-# model responds across the severity scale. rain = current-day rainfall (mm),
-# wetness = soil profile wetness 0-1, antecedent = rain * 2 (2-day mm).
-# These are fallback values — when real zone inputs exist (sensor readings /
-# IMD feed, see app/inputs.py) they take precedence.
+# Sample inputs per monitoring zone, calibrated against the real model so the
+# 27 zones spread across all four severity bands (2 low / 12 moderate /
+# 10 high / 3 severe). rain = current-day rainfall (mm), wetness = soil
+# profile wetness 0-1, antecedent = rain * 2 (2-day mm).
+# Terrain columns (lithology/slope/pga) are regional estimates; the rain and
+# wetness columns are the fallback *weather* state — when real zone inputs
+# exist (Open-Meteo / IMD feed / sensor readings, see app/inputs.py) they
+# take precedence and the probability moves with actual weather.
 ZONE_PARAMS: dict[str, dict] = {
-    "rz-001": {"lithology": 5, "slope": 45.2, "pga": 0.4981, "wetness": 0.02, "rain": 3},   # p~0.41 moderate
-    "rz-002": {"lithology": 3, "slope": 11.7, "pga": 0.3564, "wetness": 0.02, "rain": 3},   # p~0.39 moderate
-    "rz-003": {"lithology": 3, "slope": 32.3, "pga": 0.5424, "wetness": 0.28, "rain": 6},   # p~0.54 high
-    "rz-004": {"lithology": 4, "slope": 30.4, "pga": 0.6623, "wetness": 0.28, "rain": 3},   # p~0.44 moderate
-    "rz-005": {"lithology": 5, "slope": 7.2, "pga": 0.525, "wetness": 0.28, "rain": 42},  # p~0.75 high
-    "rz-006": {"lithology": 4, "slope": 24.6, "pga": 0.4698, "wetness": 0.12, "rain": 3},   # p~0.40 moderate
-    "rz-007": {"lithology": 3, "slope": 30.9, "pga": 0.5718, "wetness": 0.36, "rain": 42},  # p~0.94 severe
-    "rz-008": {"lithology": 3, "slope": 38.1, "pga": 0.5398, "wetness": 0.12, "rain": 30},  # p~0.62 high
-    "rz-009": {"lithology": 4, "slope": 23.5, "pga": 0.559, "wetness": 0.24, "rain": 30},  # p~0.68 high
-    "rz-010": {"lithology": 4, "slope": 33.3, "pga": 0.5329, "wetness": 0.28, "rain": 3},   # p~0.46 moderate
-    "rz-011": {"lithology": 5, "slope": 46.1, "pga": 0.3754, "wetness": 0.36, "rain": 6},   # p~0.89 severe
-    "rz-012": {"lithology": 5, "slope": 40.0, "pga": 0.373, "wetness": 0.22, "rain": 3},   # p~0.44 moderate
-    "rz-013": {"lithology": 3, "slope": 5.8, "pga": 0.3782, "wetness": 0.02, "rain": 3},   # p~0.36 moderate
+    # ---- North East India (rz-001..rz-013) ----
+    "rz-001": {"lithology": 5, "slope": 45.2, "pga": 0.4981, "wetness": 0.30, "rain": 1.5},  # p=0.71 high
+    "rz-002": {"lithology": 3, "slope": 11.7, "pga": 0.3564, "wetness": 0.20, "rain": 1.5},  # p=0.42 moderate
+    "rz-003": {"lithology": 3, "slope": 32.3, "pga": 0.5424, "wetness": 0.28, "rain": 1.5},  # p=0.69 high
+    "rz-004": {"lithology": 4, "slope": 30.4, "pga": 0.6623, "wetness": 0.28, "rain": 1.2},  # p=0.44 moderate
+    "rz-005": {"lithology": 5, "slope": 7.2, "pga": 0.525, "wetness": 0.28, "rain": 29.1},   # p=0.76 high
+    "rz-006": {"lithology": 4, "slope": 24.6, "pga": 0.4698, "wetness": 0.20, "rain": 1.1},  # p=0.33 moderate
+    "rz-007": {"lithology": 3, "slope": 30.9, "pga": 0.5718, "wetness": 0.36, "rain": 2.6},  # p=0.95 severe
+    "rz-008": {"lithology": 3, "slope": 38.1, "pga": 0.5398, "wetness": 0.30, "rain": 1.5},  # p=0.71 high
+    "rz-009": {"lithology": 4, "slope": 23.5, "pga": 0.559, "wetness": 0.24, "rain": 1.5},   # p=0.62 high
+    "rz-010": {"lithology": 4, "slope": 33.3, "pga": 0.5329, "wetness": 0.28, "rain": 0.9},  # p=0.27 moderate
+    "rz-011": {"lithology": 5, "slope": 46.1, "pga": 0.3754, "wetness": 0.36, "rain": 2.3},  # p=0.94 severe
+    "rz-012": {"lithology": 5, "slope": 40.0, "pga": 0.373, "wetness": 0.22, "rain": 1.0},   # p=0.37 moderate
+    "rz-013": {"lithology": 3, "slope": 5.8, "pga": 0.3782, "wetness": 0.15, "rain": 1.2},   # p=0.18 moderate
+    # ---- Himachal / Uttarakhand / J&K (rz-014..rz-019) ----
+    "rz-014": {"lithology": 6, "slope": 42, "pga": 0.55, "wetness": 0.30, "rain": 1.5},      # p=0.71 high
+    "rz-015": {"lithology": 6, "slope": 36, "pga": 0.5, "wetness": 0.20, "rain": 0.6},       # p=0.06 low
+    "rz-016": {"lithology": 7, "slope": 38, "pga": 0.6, "wetness": 0.32, "rain": 1.5},      # p=0.71 high
+    "rz-017": {"lithology": 7, "slope": 45, "pga": 0.62, "wetness": 0.34, "rain": 1.6},     # p=0.80 high
+    "rz-018": {"lithology": 6, "slope": 40, "pga": 0.5, "wetness": 0.25, "rain": 1.0},      # p=0.38 moderate
+    "rz-019": {"lithology": 5, "slope": 30, "pga": 0.45, "wetness": 0.15, "rain": 0.6},     # p=0.04 low
+    # ---- Darjeeling Himalaya (rz-020..rz-021) ----
+    "rz-020": {"lithology": 5, "slope": 38, "pga": 0.35, "wetness": 0.34, "rain": 1.5},      # p=0.71 high
+    "rz-021": {"lithology": 5, "slope": 35, "pga": 0.33, "wetness": 0.30, "rain": 1.0},      # p=0.35 moderate
+    # ---- Western Ghats (rz-022..rz-027) ----
+    "rz-022": {"lithology": 4, "slope": 32, "pga": 0.12, "wetness": 0.35, "rain": 1.2},      # p=0.36 moderate
+    "rz-023": {"lithology": 4, "slope": 30, "pga": 0.1, "wetness": 0.32, "rain": 1.5},      # p=0.39 moderate
+    "rz-024": {"lithology": 3, "slope": 25, "pga": 0.08, "wetness": 0.40, "rain": 4.7},     # p=0.93 severe
+    "rz-025": {"lithology": 4, "slope": 35, "pga": 0.08, "wetness": 0.35, "rain": 1.5},     # p=0.61 high
+    "rz-026": {"lithology": 4, "slope": 28, "pga": 0.07, "wetness": 0.32, "rain": 1.5},     # p=0.34 moderate
+    "rz-027": {"lithology": 5, "slope": 33, "pga": 0.1, "wetness": 0.30, "rain": 1.5},      # p=0.41 moderate
 }
 
 # Relative rain / wetness multipliers per forecast day (relative to today's

@@ -1,10 +1,19 @@
 # AI-Based Early Warning and Landslide Risk Monitoring System
 
-An early-warning dashboard for rainfall-triggered landslides in Nepal. It pairs a
-React + TypeScript monitoring console (risk zones, GIS map, sensors, alerts,
+An early-warning dashboard for rainfall-triggered landslides across **India's
+hazard belt** (27 zones: North East India, the Himalaya — J&K / Himachal /
+Uttarakhand — Darjeeling, and the Western Ghats). It pairs a React +
+TypeScript monitoring console (risk zones, GIS map, sensors, alerts,
 predictions, reports, emergency response) with NASA's **LHASA** model
 (*Landslide Hazard Assessment for Situational Awareness*), which estimates the
 daily probability of landslide occurrence on a ~1 km global grid.
+
+Live data is on by default — Open-Meteo weather drives every risk score, the
+forecast cards show real rainfall, the GIS map carries live USGS earthquakes
+and satellite imagery, with zero signup. Every additional Indian data source
+(IMD, MOSDAC, NASA Earthdata, SMS gateways, IoT sensor stations) is catalogued
+in [`doc/INDIA_LIVE_DATA_APIS.md`](doc/INDIA_LIVE_DATA_APIS.md), and optional
+ESP32 sensor-station support is documented in [`doc/IOT_INTEGRATION.md`](doc/IOT_INTEGRATION.md).
 
 | Layer     | Tech stack                                                    | Location    |
 | --------- | ------------------------------------------------------------- | ----------- |
@@ -87,7 +96,7 @@ pip install -r backend/requirements.txt
 # 3. NASA data access credentials (Earthdata / PPS) in ~/.netrc and ~/.dodsrc
 #    -> follow "Installation" in LHASA/README.md
 
-# 4. Start a nowcast + 3 forecast days over Nepal
+# 4. Start a nowcast + 3 forecast days over India
 curl -X POST http://127.0.0.1:8000/api/v1/ml/runs -H "Content-Type: application/json" -d '{"lead": 3}'
 #    poll:  curl http://127.0.0.1:8000/api/v1/ml/runs/<run_id>
 ```
@@ -108,9 +117,14 @@ rasters, or your sensor network) is documented step by step in
 | GET    | `/api/v1/ml/runs`               | List runs                                          |
 | GET    | `/api/v1/ml/runs/{run_id}`      | Run status + log                                   |
 | GET    | `/api/v1/ml/predictions`        | Zone predictions (nowcast)                         |
-| GET    | `/api/v1/ml/forecasts`          | 24h/48h/72h forecast                               |
+| GET    | `/api/v1/ml/forecasts`          | 24h/48h/72h forecast (live rainfall mm)            |
 | GET    | `/api/v1/ml/recommendations`    | Derived high/medium priority alerts                |
 | POST   | `/api/v1/ml/predict`            | One-zone prediction + triggers a run               |
+| GET    | `/api/v1/zones`                 | 27 India zones + live model scores                 |
+| GET    | `/api/v1/seismic/live`          | Live USGS earthquakes in the India study area      |
+| POST   | `/api/v1/weather/refresh`       | Pull Open-Meteo current + 3-day forecast           |
+| POST   | `/api/v1/sensors/readings`      | IoT / field sensor push (feeds the model)          |
+| POST   | `/api/v1/ml/evaluate`           | Raise alerts + fan out via SMS/webhook adapters    |
 
 Interactive API docs: **http://127.0.0.1:8000/docs**.
 

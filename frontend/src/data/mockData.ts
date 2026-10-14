@@ -18,9 +18,10 @@ import type {
 } from '../types';
 
 // ---------------------------------------------------------------------------
-// North Eastern Region (India) prototype data.
-// Zone ids rz-001..rz-013 match backend/app/zones.py so the LHASA API and the
-// map/predictions views stay in sync across all 8 NER states.
+// India prototype data.
+// Zone ids rz-001..rz-027 match backend/app/zones.py so the LHASA API and the
+// map/predictions views stay in sync: rz-001..013 = North East India,
+// rz-014..027 = Himalaya (HP/UK/J&K) + Darjeeling + Western Ghats.
 // ---------------------------------------------------------------------------
 
 // ---- Dashboard Summary ----
@@ -34,7 +35,7 @@ export const dashboardSummary: DashboardSummary = {
   lastUpdated: new Date().toISOString(),
 };
 
-// ---- Risk Zones (13 across all 8 NER states) ----
+// ---- Risk Zones (27 across India's landslide-prone belt) ----
 export const riskZones: RiskZone[] = [
   {
     id: 'rz-001',
@@ -43,8 +44,8 @@ export const riskZones: RiskZone[] = [
     state: 'Arunachal Pradesh',
     latitude: 27.08,
     longitude: 92.42,
-    riskScore: 41,
-    severity: 'moderate',
+    riskScore: 71,
+    severity: 'high',
     lastUpdated: '2026-09-08T06:00:00Z',
     population: 95400,
     description: 'Steep slope failures along Bomdila–Dirang stretch of the BCT Road.',
@@ -211,12 +212,211 @@ export const riskZones: RiskZone[] = [
     state: 'Tripura',
     latitude: 23.93,
     longitude: 91.85,
-    riskScore: 36,
+    riskScore: 18,
     severity: 'moderate',
     lastUpdated: '2026-09-08T06:00:00Z',
     population: 378000,
     description: 'Red-soil hill slopes in Dhalai district.',
     factors: ['Red soil erosion', 'Monsoon rainfall', 'Hill cutting'],
+  },
+  // ---- Himachal Pradesh / Uttarakhand / J&K ----
+  {
+    id: 'rz-014',
+    name: 'Kinnaur Valleys',
+    district: 'Kinnaur',
+    state: 'Himachal Pradesh',
+    latitude: 31.53,
+    longitude: 78.26,
+    riskScore: 71,
+    severity: 'high',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 84000,
+    description: 'Steep Kinnaur valleys along NH-5; seismic and glacial overprint.',
+    factors: ['Steep slopes', 'Seismic zone V', 'NH-5 hill cuts'],
+  },
+  {
+    id: 'rz-015',
+    name: 'Shimla Ridge',
+    district: 'Shimla',
+    state: 'Himachal Pradesh',
+    latitude: 31.10,
+    longitude: 77.17,
+    riskScore: 6,
+    severity: 'low',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 187000,
+    description: 'Shimla ridge slopes cut by urban expansion and road works.',
+    factors: ['Urban load', 'Dry spell', 'Road cutting'],
+  },
+  {
+    id: 'rz-016',
+    name: 'Joshimath Slopes',
+    district: 'Chamoli',
+    state: 'Uttarakhand',
+    latitude: 30.55,
+    longitude: 79.56,
+    riskScore: 71,
+    severity: 'high',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 138000,
+    description: 'Joshimath subsidence-prone slopes above the Alaknanda valley.',
+    factors: ['Slope creep', 'Construction loading', 'Char Dham cuts'],
+  },
+  {
+    id: 'rz-017',
+    name: 'Kedarnath Valley',
+    district: 'Rudraprayag',
+    state: 'Uttarakhand',
+    latitude: 30.26,
+    longitude: 79.06,
+    riskScore: 80,
+    severity: 'high',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 106000,
+    description: 'Kedarnath valley slopes scoured by the 2013 disaster terrain.',
+    factors: ['Loose debris', 'Cloudburst exposure', 'Steep V-valley'],
+  },
+  {
+    id: 'rz-018',
+    name: 'Kishtwar Hills',
+    district: 'Kishtwar',
+    state: 'Jammu and Kashmir',
+    latitude: 33.31,
+    longitude: 75.77,
+    riskScore: 38,
+    severity: 'moderate',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 119000,
+    description: 'Kishtwar hill slopes above the Chenab with monsoon slips.',
+    factors: ['Chenab gorges', 'Monsoon rain', 'Road cuts'],
+  },
+  {
+    id: 'rz-019',
+    name: 'Anantnag Valleys',
+    district: 'Anantnag',
+    state: 'Jammu and Kashmir',
+    latitude: 33.73,
+    longitude: 75.15,
+    riskScore: 4,
+    severity: 'low',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 900000,
+    description: 'Kashmir valley margins — lower monsoon rainfall, snowmelt driven.',
+    factors: ['Dry spell', 'Snowmelt', 'Valley margins'],
+  },
+  // ---- Darjeeling Himalaya (West Bengal) ----
+  {
+    id: 'rz-020',
+    name: 'Darjeeling Himalaya',
+    district: 'Darjeeling',
+    state: 'West Bengal',
+    latitude: 27.04,
+    longitude: 88.26,
+    riskScore: 71,
+    severity: 'high',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 1500000,
+    description: 'Darjeeling tea slopes on weathered phyllite; intense SW monsoon.',
+    factors: ['Weathered phyllite', 'Tea estate cutting', 'SW monsoon'],
+  },
+  {
+    id: 'rz-021',
+    name: 'Kalimpong Ridges',
+    district: 'Kalimpong',
+    state: 'West Bengal',
+    latitude: 27.22,
+    longitude: 88.47,
+    riskScore: 35,
+    severity: 'moderate',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 150000,
+    description: 'Kalimpong ridges above the Teesta with road-cut instability.',
+    factors: ['Teesta banking', 'Road cuts', 'Moderate rainfall'],
+  },
+  // ---- Western Ghats ----
+  {
+    id: 'rz-022',
+    name: 'Mahabaleshwar Escarpment',
+    district: 'Satara',
+    state: 'Maharashtra',
+    latitude: 17.93,
+    longitude: 73.66,
+    riskScore: 36,
+    severity: 'moderate',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 100000,
+    description: 'Mahabaleshwar lateritic escarpment above the Krishna valley.',
+    factors: ['Laterite caps', 'Orographic rain', 'Cliff cuts'],
+  },
+  {
+    id: 'rz-023',
+    name: 'Raigad Sahyadri',
+    district: 'Raigad',
+    state: 'Maharashtra',
+    latitude: 18.09,
+    longitude: 73.40,
+    riskScore: 39,
+    severity: 'moderate',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 1000000,
+    description: 'Raigad Sahyadri cut slopes above the Konkan coast.',
+    factors: ['Konkan escarpment', 'NH-66 cuts', 'Monsoon rain'],
+  },
+  {
+    id: 'rz-024',
+    name: 'Wayanad Ghats',
+    district: 'Wayanad',
+    state: 'Kerala',
+    latitude: 11.68,
+    longitude: 76.13,
+    riskScore: 93,
+    severity: 'severe',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 817000,
+    description: 'Wayanad laterite slopes — 2024 Chooralmala–Mundakkai disaster belt.',
+    factors: ['Soil saturation', 'Laterite over weathered rock', 'Extreme rainfall'],
+  },
+  {
+    id: 'rz-025',
+    name: 'Idukki High Ranges',
+    district: 'Idukki',
+    state: 'Kerala',
+    latitude: 9.85,
+    longitude: 76.97,
+    riskScore: 61,
+    severity: 'high',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 1100000,
+    description: 'Idukki high-range slopes with plantation cutting and extreme rain.',
+    factors: ['Plantation cutting', 'High-range rain', 'Slope undercutting'],
+  },
+  {
+    id: 'rz-026',
+    name: 'Kodagu Hills',
+    district: 'Kodagu',
+    state: 'Karnataka',
+    latitude: 12.42,
+    longitude: 75.74,
+    riskScore: 34,
+    severity: 'moderate',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 545000,
+    description: 'Kodagu coffee-slope failures above the Cauvery basin.',
+    factors: ['Coffee slopes', 'Anthropogenic cutting', 'Monsoon rain'],
+  },
+  {
+    id: 'rz-027',
+    name: 'Nilgiri Slopes',
+    district: 'The Nilgiris',
+    state: 'Tamil Nadu',
+    latitude: 11.41,
+    longitude: 76.69,
+    riskScore: 41,
+    severity: 'moderate',
+    lastUpdated: '2026-09-08T06:00:00Z',
+    population: 735000,
+    description: 'Nilgiri escarpment with toy-railway and hill-road cut slopes.',
+    factors: ['Escarpment cuts', 'Toy railway cuts', 'Monsoon rain'],
   },
 ];
 
@@ -288,6 +488,17 @@ export const alerts: Alert[] = [
     updatedAt: '2026-09-08T04:30:00Z',
     source: 'Sensor Network',
   },
+  {
+    id: 'al-007',
+    title: 'Severe Landslide Warning - Wayanad',
+    message: 'LHASA estimates >90% landslide probability in Wayanad Ghats. Evacuation readiness for Chooralmala–Mundakkai belt.',
+    severity: 'emergency',
+    district: 'Wayanad',
+    status: 'active',
+    createdAt: '2026-09-08T06:12:00Z',
+    updatedAt: '2026-09-08T06:12:00Z',
+    source: 'ML Prediction Service (LHASA)',
+  },
 ];
 
 // ---- Sensors ----
@@ -304,6 +515,20 @@ export const sensors: Sensor[] = [
   { id: 'SNS-010', name: 'Bomdila Rainfall', type: 'rainfall', status: 'online', latitude: 27.09, longitude: 92.41, district: 'West Kameng', lastReading: 18, unit: 'mm/hr', lastUpdated: '2026-09-08T05:45:00Z', batteryLevel: 82 },
   { id: 'SNS-011', name: 'Dhalai Soil Moisture', type: 'soil_moisture', status: 'online', latitude: 23.94, longitude: 91.86, district: 'Dhalai', lastReading: 47, unit: '%', lastUpdated: '2026-09-08T05:40:00Z', batteryLevel: 76 },
   { id: 'SNS-012', name: 'Itanagar Rain Gauge', type: 'rainfall', status: 'maintenance', latitude: 27.11, longitude: 93.63, district: 'Papum Pare', lastReading: 12, unit: 'mm/hr', lastUpdated: '2026-09-08T05:00:00Z', batteryLevel: 40 },
+  { id: 'SNS-014', name: 'Kalpa Tilt Sensor', type: 'tilt', status: 'online', latitude: 31.53, longitude: 78.26, district: 'Kinnaur', lastReading: 1.8, unit: '°', lastUpdated: '2026-09-08T06:05:00Z', batteryLevel: 88 },
+  { id: 'SNS-015', name: 'Shimla Rain Gauge', type: 'rainfall', status: 'online', latitude: 31.10, longitude: 77.17, district: 'Shimla', lastReading: 2, unit: 'mm/hr', lastUpdated: '2026-09-08T06:02:00Z', batteryLevel: 76 },
+  { id: 'SNS-016', name: 'Joshimath Moisture', type: 'soil_moisture', status: 'online', latitude: 30.55, longitude: 79.56, district: 'Chamoli', lastReading: 64, unit: '%', lastUpdated: '2026-09-08T06:01:00Z', batteryLevel: 82 },
+  { id: 'SNS-017', name: 'Rudraprayag Rain Gauge', type: 'rainfall', status: 'online', latitude: 30.26, longitude: 79.06, district: 'Rudraprayag', lastReading: 26, unit: 'mm/hr', lastUpdated: '2026-09-08T05:58:00Z', batteryLevel: 71 },
+  { id: 'SNS-018', name: 'Kishtwar Rain Gauge', type: 'rainfall', status: 'online', latitude: 33.31, longitude: 75.77, district: 'Kishtwar', lastReading: 9, unit: 'mm/hr', lastUpdated: '2026-09-08T05:55:00Z', batteryLevel: 67 },
+  { id: 'SNS-019', name: 'Anantnag Soil Moisture', type: 'soil_moisture', status: 'online', latitude: 33.73, longitude: 75.15, district: 'Anantnag', lastReading: 22, unit: '%', lastUpdated: '2026-09-08T05:52:00Z', batteryLevel: 91 },
+  { id: 'SNS-020', name: 'Darjeeling Rainfall', type: 'rainfall', status: 'online', latitude: 27.04, longitude: 88.26, district: 'Darjeeling', lastReading: 34, unit: 'mm/hr', lastUpdated: '2026-09-08T06:00:00Z', batteryLevel: 73 },
+  { id: 'SNS-021', name: 'Kalimpong Moisture', type: 'soil_moisture', status: 'warning', latitude: 27.22, longitude: 88.47, district: 'Kalimpong', lastReading: 71, unit: '%', lastUpdated: '2026-09-08T05:45:00Z', batteryLevel: 24 },
+  { id: 'SNS-022', name: 'Mahabaleshwar Rain Gauge', type: 'rainfall', status: 'online', latitude: 17.93, longitude: 73.66, district: 'Satara', lastReading: 41, unit: 'mm/hr', lastUpdated: '2026-09-08T05:50:00Z', batteryLevel: 85 },
+  { id: 'SNS-023', name: 'Mahad Moisture', type: 'soil_moisture', status: 'online', latitude: 18.09, longitude: 73.40, district: 'Raigad', lastReading: 58, unit: '%', lastUpdated: '2026-09-08T05:48:00Z', batteryLevel: 79 },
+  { id: 'SNS-024', name: 'Wayanad Soil Moisture', type: 'soil_moisture', status: 'online', latitude: 11.68, longitude: 76.13, district: 'Wayanad', lastReading: 92, unit: '%', lastUpdated: '2026-09-08T06:04:00Z', batteryLevel: 66 },
+  { id: 'SNS-025', name: 'Munnar Tilt Sensor', type: 'tilt', status: 'online', latitude: 9.85, longitude: 76.97, district: 'Idukki', lastReading: 2.4, unit: '°', lastUpdated: '2026-09-08T05:59:00Z', batteryLevel: 57 },
+  { id: 'SNS-026', name: 'Madikeri Rain Gauge', type: 'rainfall', status: 'online', latitude: 12.42, longitude: 75.74, district: 'Kodagu', lastReading: 18, unit: 'mm/hr', lastUpdated: '2026-09-08T05:57:00Z', batteryLevel: 74 },
+  { id: 'SNS-027', name: 'Nilgiris Soil Moisture', type: 'soil_moisture', status: 'online', latitude: 11.41, longitude: 76.69, district: 'The Nilgiris', lastReading: 69, unit: '%', lastUpdated: '2026-09-08T05:54:00Z', batteryLevel: 81 },
 ];
 
 // ---- Citizen Reports ----
@@ -326,6 +551,16 @@ export const roads: Road[] = [
   { id: 'rd-006', name: 'Bomdila–Dirang BCT Road', from: 'Bomdila', to: 'Dirang', district: 'West Kameng', status: 'open', lastUpdated: '2026-09-08T05:50:00Z', coordinates: [[27.08, 92.42], [27.15, 92.40], [27.22, 92.38]] },
   { id: 'rd-007', name: 'Lunglei–Hnahthial Road', from: 'Lunglei', to: 'Hnahthial', district: 'Lunglei', status: 'open', lastUpdated: '2026-09-08T05:40:00Z', coordinates: [[22.88, 92.73], [22.90, 92.78], [22.93, 92.84]] },
   { id: 'rd-008', name: 'Tura–Rongram Road', from: 'Tura', to: 'Rongram', district: 'West Garo Hills', status: 'open', lastUpdated: '2026-09-08T05:30:00Z', coordinates: [[25.51, 90.22], [25.53, 90.25], [25.55, 90.29]] },
+  { id: 'rd-009', name: 'NH-5 Kinnaur Section', from: 'Shimla', to: 'Kalpa', district: 'Kinnaur', status: 'partially_blocked', reason: 'NH-5 hill-cut slopes', lastUpdated: '2026-09-08T06:00:00Z', alternativeRoute: 'Shimla–Kinnaur via Reckong Peo where open', coordinates: [[31.10, 77.17], [31.35, 77.75], [31.53, 78.26]] },
+  { id: 'rd-010', name: 'NH-7 Joshimath–Badrinath', from: 'Joshimath', to: 'Badrinath', district: 'Chamoli', status: 'partially_blocked', reason: 'Subsidence-prone slopes above Alaknanda', lastUpdated: '2026-09-08T06:00:00Z', alternativeRoute: 'Cargo road via Pipalkoti where open', coordinates: [[30.55, 79.56], [30.65, 79.40], [30.74, 79.27]] },
+  { id: 'rd-011', name: 'NH-244 Kishtwar–Batote', from: 'Kishtwar', to: 'Batote', district: 'Kishtwar', status: 'open', lastUpdated: '2026-09-08T05:55:00Z', coordinates: [[33.31, 75.77], [33.20, 75.40], [33.10, 75.10]] },
+  { id: 'rd-012', name: 'NH-717 Siliguri–Darjeeling', from: 'Siliguri', to: 'Darjeeling', district: 'Darjeeling', status: 'partially_blocked', reason: 'Teesta banking slides in monsoon', lastUpdated: '2026-09-08T06:00:00Z', alternativeRoute: 'NH-31C via Kalimpong where open', coordinates: [[26.72, 88.42], [26.90, 88.30], [27.04, 88.26]] },
+  { id: 'rd-013', name: 'NH-66 Kolad–Mahad', from: 'Kolad', to: 'Mahad', district: 'Raigad', status: 'open', lastUpdated: '2026-09-08T05:50:00Z', coordinates: [[18.46, 73.15], [18.25, 73.27], [18.09, 73.40]] },
+  { id: 'rd-014', name: 'Mahabaleshwar–Panchgani Ghat Road', from: 'Mahabaleshwar', to: 'Panchgani', district: 'Satara', status: 'open', lastUpdated: '2026-09-08T05:52:00Z', coordinates: [[17.93, 73.66], [17.92, 73.80], [17.98, 73.93]] },
+  { id: 'rd-015', name: 'NH-766 Kalpetta–Sultan Bathery', from: 'Kalpetta', to: 'Sultan Bathery', district: 'Wayanad', status: 'fully_blocked', reason: 'Chooralmala–Mundakkai belt — debris flow zone', lastUpdated: '2026-09-08T06:00:00Z', alternativeRoute: 'NH-766 via Meppadi where open', coordinates: [[11.68, 76.13], [11.60, 76.20], [11.55, 76.32]] },
+  { id: 'rd-016', name: 'NH-85 Adimali–Munnar', from: 'Adimali', to: 'Munnar', district: 'Idukki', status: 'partially_blocked', reason: 'Ghat cut slopes in heavy rain', lastUpdated: '2026-09-08T05:58:00Z', coordinates: [[10.11, 76.96], [10.00, 76.96], [9.85, 76.97]] },
+  { id: 'rd-017', name: 'NH-275 Madikeri–Virajpet', from: 'Madikeri', to: 'Virajpet', district: 'Kodagu', status: 'open', lastUpdated: '2026-09-08T05:56:00Z', coordinates: [[12.42, 75.74], [12.35, 75.85], [12.28, 75.97]] },
+  { id: 'rd-018', name: 'NH-181 Ooty–Gudalur', from: 'Ooty', to: 'Gudalur', district: 'The Nilgiris', status: 'open', lastUpdated: '2026-09-08T05:54:00Z', coordinates: [[11.41, 76.69], [11.45, 76.55], [11.52, 76.45]] },
 ];
 
 // ---- Notifications ----
@@ -373,7 +608,7 @@ export const aiRecommendations: AIRecommendation[] = [
   { id: 'rec-005', priority: 'low', title: 'Sensor Maintenance - Haflong & Lunglei', description: 'Restore offline soil moisture sensors (HFL-S01, LGL-S01).', targetZones: ['Haflong Highlands', 'Lunglei Ghats'], createdAt: '2026-09-08T05:00:00Z' },
 ];
 
-// ---- Historical Events (documented NER incidents) ----
+// ---- Historical Events (documented Indian landslide disasters) ----
 export const historicalEvents: HistoricalEvent[] = [
   { id: 'he-001', name: 'Mangan NH-10 Blockade', date: '2025-07-11', district: 'Mangan', state: 'Sikkim', severity: 'severe', casualties: 3, displaced: 1200, description: 'Cloudburst-triggered slides on NH-10 isolated upper Teesta valley for days.', latitude: 27.52, longitude: 88.55, triggers: ['Cloudburst', 'Teesta valley instability'], areaAffected: 3.1 },
   { id: 'he-002', name: 'Aizawl Escarpment Slides', date: '2024-08-21', district: 'Aizawl', state: 'Mizoram', severity: 'severe', casualties: 5, displaced: 2100, description: 'Prolonged monsoon triggered multiple slope failures in the hill capital.', latitude: 23.73, longitude: 92.72, triggers: ['Extended monsoon', 'Shale weathering', 'Urban load'], areaAffected: 1.9 },
@@ -381,6 +616,12 @@ export const historicalEvents: HistoricalEvent[] = [
   { id: 'he-004', name: 'Shillong Marginal Slope Failure', date: '2023-06-24', district: 'East Khasi Hills', state: 'Meghalaya', severity: 'high', casualties: 0, displaced: 600, description: 'Retaining wall and marginal slope collapse during the monsoon onset.', latitude: 25.57, longitude: 91.89, triggers: ['Extreme rainfall', 'Unplanned hill cutting'], areaAffected: 0.6 },
   { id: 'he-005', name: 'Kohima NH-29 Slip', date: '2022-07-09', district: 'Kohima', state: 'Nagaland', severity: 'moderate', casualties: 1, displaced: 450, description: 'Cut-slope failure along NH-29 restricted convoy movement.', latitude: 25.67, longitude: 94.10, triggers: ['Rainfall', 'Road cut slopes'], areaAffected: 0.5 },
   { id: 'he-006', name: 'Lunglei Town Slide', date: '2022-06-17', district: 'Lunglei', state: 'Mizoram', severity: 'moderate', casualties: 2, displaced: 380, description: 'Slope above the town road gave way after intense rain.', latitude: 22.88, longitude: 92.73, triggers: ['Friable shales', 'Intense rainfall'], areaAffected: 0.4 },
+  { id: 'he-009', name: 'Kedarnath Disaster', date: '2013-06-17', district: 'Rudraprayag', state: 'Uttarakhand', severity: 'severe', casualties: 4000, displaced: 100000, description: 'Cloudburst and glacial-lake outburst triggered floods and debris flows in the Mandakini valley; over 4,000 deaths reported.', latitude: 30.73, longitude: 79.07, triggers: ['Cloudburst', 'GLOF', 'Unregulated pilgrim traffic'], areaAffected: 12.0 },
+  { id: 'he-010', name: 'Malpa Landslide', date: '1998-08-07', district: 'Pithoragarh', state: 'Uttarakhand', severity: 'severe', casualties: 209, displaced: 1200, description: 'Two villages of Malpa were buried by a massive debris slide; 209 killed.', latitude: 30.03, longitude: 80.35, triggers: ['Extreme rainfall', 'Loose debris terrain'], areaAffected: 2.4 },
+  { id: 'he-011', name: 'Wayanad Chooralmala–Mundakkai Slides', date: '2024-07-30', district: 'Wayanad', state: 'Kerala', severity: 'severe', casualties: 231, displaced: 5000, description: 'Pre-dawn debris flows wiped out Chooralmala and Mundakkai after days of extreme rain; at least 231 deaths.', latitude: 11.65, longitude: 76.17, triggers: ['Extreme rainfall', 'Lateritic soil saturation', 'Steep gullies'], areaAffected: 5.5 },
+  { id: 'he-012', name: 'South Lhonak Lake Outburst & Teesta Floods', date: '2023-10-04', district: 'Mangan', state: 'Sikkim', severity: 'severe', casualties: 87, displaced: 800, description: 'Lake outburst above South Lhonak sent floods and debris down the Teesta, damaging NH-10 and power projects.', latitude: 27.91, longitude: 88.20, triggers: ['GLOF', 'Cloudburst', 'Moraine dam breach'], areaAffected: 8.0 },
+  { id: 'he-013', name: 'Joshimath Subsidence', date: '2023-01-06', district: 'Chamoli', state: 'Uttarakhand', severity: 'moderate', casualties: 0, displaced: 3000, description: 'Ground subsidence cracked hundreds of houses in Joshimath; around 600 families were relocated.', latitude: 30.55, longitude: 79.56, triggers: ['Slope creep', 'Construction loading', 'Loose sediment terrain'], areaAffected: 1.2 },
+  { id: 'he-014', name: 'Kalimpong–Teesta Bank Slides', date: '2022-06-17', district: 'Kalimpong', state: 'West Bengal', severity: 'moderate', casualties: 6, displaced: 240, description: 'Monsoon slides along Teesta banking roads severed Kalimpong connectivity for days.', latitude: 27.22, longitude: 88.47, triggers: ['Continuous rainfall', 'Road-cut slopes'], areaAffected: 0.4 },
 ];
 
 // ---- Emergency Zones ----
@@ -390,6 +631,10 @@ export const emergencyZones: EmergencyZone[] = [
   { id: 'ez-003', name: 'Shillong Plateau Zone', district: 'East Khasi Hills', populationAtRisk: 143000, priorityRank: 3, severity: 'high', infrastructureImpact: ['NH-40', 'Water supply', 'Schools (9)'], hospitals: 3, shelters: 6, latitude: 25.57, longitude: 91.88 },
   { id: 'ez-004', name: 'Kohima Ridge Zone', district: 'Kohima', populationAtRisk: 96000, priorityRank: 4, severity: 'high', infrastructureImpact: ['NH-29', 'Road network', 'Schools (6)'], hospitals: 1, shelters: 4, latitude: 25.67, longitude: 94.11 },
   { id: 'ez-005', name: 'Haflong Corridor Zone', district: 'Dima Hasao', populationAtRisk: 81000, priorityRank: 5, severity: 'high', infrastructureImpact: ['NH-6', 'Railway (Lumding–Silchar)', 'Power grid'], hospitals: 1, shelters: 3, latitude: 25.16, longitude: 93.02 },
+  { id: 'ez-006', name: 'Joshimath–Chamoli Zone', district: 'Chamoli', populationAtRisk: 60000, priorityRank: 6, severity: 'high', infrastructureImpact: ['NH-7 Char Dham', 'Tapovan Vishnugad HEP', 'Water supply', 'Schools (12)'], hospitals: 1, shelters: 4, latitude: 30.55, longitude: 79.56 },
+  { id: 'ez-007', name: 'Wayanad Ghat Zone', district: 'Wayanad', populationAtRisk: 120000, priorityRank: 7, severity: 'severe', infrastructureImpact: ['NH-766', 'Puzhithara bridge', 'Plantations', 'Schools (18)'], hospitals: 2, shelters: 9, latitude: 11.68, longitude: 76.13 },
+  { id: 'ez-008', name: 'Kinnaur NH-5 Zone', district: 'Kinnaur', populationAtRisk: 40000, priorityRank: 8, severity: 'high', infrastructureImpact: ['NH-5', 'Sutlej bridges', 'Power lines'], hospitals: 1, shelters: 3, latitude: 31.53, longitude: 78.26 },
+  { id: 'ez-009', name: 'Darjeeling Hills Zone', district: 'Darjeeling', populationAtRisk: 150000, priorityRank: 9, severity: 'high', infrastructureImpact: ['NH-717', 'Toy railway', 'Tea estates', 'Schools (22)'], hospitals: 2, shelters: 6, latitude: 27.04, longitude: 88.26 },
 ];
 
 // ---- Analytics Data ----

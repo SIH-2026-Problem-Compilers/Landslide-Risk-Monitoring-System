@@ -18,6 +18,7 @@ from sqlalchemy import desc, select
 from .. import inputs, models, scorer, zones
 from ..db import get_session
 from ..providers import imd as imd_provider
+from ..providers import notify as notify_provider
 from ..i18n import get_alert_content, SUPPORTED_LANGUAGES
 
 router = APIRouter(prefix="/api/v1")
@@ -349,4 +350,13 @@ def evaluate_alerts() -> dict:
             existing.add((record["zoneId"], "active"))
             created.append(_alert_to_dict(alert))
         session.commit()
-    return {"created": created, "skipped_duplicates": skipped}
+
+    # Fan the new alerts out through the configured delivery channel
+    # (log-only by default; Twilio/MSG91/webhook when env vars are set —
+    # see backend/app/providers/notify.py and doc/INDIA_LIVE_DATA_APIS.md).
+    deliveries = [notify_provider.send_alert(alert) for alert in created]
+    return {
+        "created": created,
+        "skipped_duplicates": skipped,
+        "deliveries": deliveries,
+    }

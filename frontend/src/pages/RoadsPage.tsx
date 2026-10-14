@@ -83,8 +83,8 @@ export function RoadsPage() {
         {/* Map */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ height: '500px' }}>
           <MapContainer
-            center={[26.0, 92.7]}
-            zoom={6}
+            center={[22.5, 82.0]}
+            zoom={5}
             style={{ height: '100%', width: '100%' }}
             scrollWheelZoom={true}
           >
