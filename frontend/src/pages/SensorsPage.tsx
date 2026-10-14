@@ -31,11 +31,13 @@ export function SensorsPage() {
   const { data: sensors, isLoading } = useQuery({
     queryKey: ['sensors'],
     queryFn: sensorService.getSensors,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: readings } = useQuery({
-    queryKey: ['sensor-readings'],
+    queryKey: ['sensor-readings', 'SNS-001'],
     queryFn: () => sensorService.getSensorReadings('SNS-001', 24),
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const onlineCount = sensors?.filter((s) => s.status === 'online').length || 0;

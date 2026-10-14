@@ -4,6 +4,11 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.local
+
+# --- Frontend ---
+frontend/.env.local
+frontend/.env.*.local
 
 # --- LHASA model runtime artifacts ---
 # Downloaded NASA data + model outputs generated when lhasa.py runs.

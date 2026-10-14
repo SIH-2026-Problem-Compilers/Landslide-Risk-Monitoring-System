@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MapContainer, TileLayer, Polyline, Popup } from 'react-leaflet';
-import { dashboardService } from '../services';
+import { liveDataService } from '../services';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatusBadge } from '../components/ui/SeverityBadge';
 import { SkeletonCard } from '../components/ui/LoadingSkeleton';
@@ -25,7 +25,8 @@ const statusColors: Record<string, string> = {
 export function RoadsPage() {
   const { data: roads, isLoading } = useQuery({
     queryKey: ['roads'],
-    queryFn: () => dashboardService.getRiskZones().then(() => import('../data/mockData').then(m => m.roads)),
+    queryFn: liveDataService.getRoads,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const [filter, setFilter] = useState<RoadStatus | 'all'>('all');
@@ -82,8 +83,8 @@ export function RoadsPage() {
         {/* Map */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ height: '500px' }}>
           <MapContainer
-            center={[27.7, 85.5]}
-            zoom={8}
+            center={[26.0, 92.7]}
+            zoom={6}
             style={{ height: '100%', width: '100%' }}
             scrollWheelZoom={true}
           >

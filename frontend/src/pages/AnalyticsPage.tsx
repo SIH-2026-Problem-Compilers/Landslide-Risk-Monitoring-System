@@ -14,21 +14,25 @@ export function AnalyticsPage() {
   const { data: trends, isLoading } = useQuery({
     queryKey: ['risk-trends'],
     queryFn: dashboardService.getRiskTrends,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: districtData } = useQuery({
     queryKey: ['district-risk'],
     queryFn: dashboardService.getDistrictRiskData,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: severityData } = useQuery({
     queryKey: ['severity-distribution'],
     queryFn: dashboardService.getSeverityDistribution,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: rainfallData } = useQuery({
     queryKey: ['rainfall-risk'],
     queryFn: dashboardService.getRainfallVsRisk,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   return (

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { mlService } from '../services';
 import { PageHeader } from '../components/ui/PageHeader';
 import { SeverityBadge } from '../components/ui/SeverityBadge';
@@ -11,23 +11,41 @@ import {
   TrendingUp,
   Shield,
   Zap,
+  RefreshCw,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function PredictionsPage() {
+  const queryClient = useQueryClient();
+
   const { data: predictions, isLoading } = useQuery({
     queryKey: ['predictions'],
     queryFn: mlService.getPredictions,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: forecasts } = useQuery({
     queryKey: ['forecasts'],
     queryFn: mlService.getForecasts,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: recommendations } = useQuery({
     queryKey: ['recommendations'],
     queryFn: mlService.getRecommendations,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
+  });
+
+  const refreshMutation = useMutation({
+    mutationFn: mlService.refreshWeather,
+    onSuccess: () => {
+      // Invalidate all prediction-related queries so they reload with new inputs
+      queryClient.invalidateQueries({ queryKey: ['predictions'] });
+      queryClient.invalidateQueries({ queryKey: ['forecasts'] });
+      queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+      queryClient.invalidateQueries({ queryKey: ['risk-zones'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+    },
   });
 
   const topPrediction = predictions?.[0];
@@ -38,9 +56,19 @@ export function PredictionsPage() {
         title="Landslide Predictions"
         subtitle="AI-powered risk assessment and forecasting"
         actions={
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs font-medium text-green-700">ML Engine Active</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refreshMutation.mutate()}
+              disabled={refreshMutation.isPending}
+              className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-medium rounded-lg flex items-center gap-1.5 hover:bg-gray-50 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshMutation.isPending ? 'animate-spin' : ''}`} />
+              {refreshMutation.isPending ? 'Refreshing…' : 'Refresh Weather'}
+            </button>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-xs font-medium text-green-700">ML Engine Active</span>
+            </div>
           </div>
         }
       />

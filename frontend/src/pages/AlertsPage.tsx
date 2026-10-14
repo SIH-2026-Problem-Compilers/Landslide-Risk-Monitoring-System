@@ -30,6 +30,7 @@ export function AlertsPage() {
   const { data: alerts, isLoading } = useQuery({
     queryKey: ['alerts'],
     queryFn: dashboardService.getAlerts,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all');

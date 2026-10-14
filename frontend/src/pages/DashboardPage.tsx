@@ -21,26 +21,31 @@ export function DashboardPage() {
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['dashboard-summary'],
     queryFn: dashboardService.getSummary,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: alerts } = useQuery({
     queryKey: ['alerts'],
     queryFn: dashboardService.getAlerts,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: trends } = useQuery({
     queryKey: ['risk-trends'],
     queryFn: dashboardService.getRiskTrends,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: severityData } = useQuery({
     queryKey: ['severity-distribution'],
     queryFn: dashboardService.getSeverityDistribution,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: districtData } = useQuery({
     queryKey: ['district-risk'],
     queryFn: dashboardService.getDistrictRiskData,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const stats = summary
@@ -60,7 +65,15 @@ export function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard Overview"
-        subtitle="Real-time landslide risk monitoring across all districts"
+        subtitle="Real-time landslide risk monitoring across NER districts"
+        actions={
+          import.meta.env.VITE_SHOW_LIVE_BADGE === 'true' ? (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-xs font-medium text-green-700">Live Data</span>
+            </div>
+          ) : undefined
+        }
       />
 
       {/* Stat Cards */}

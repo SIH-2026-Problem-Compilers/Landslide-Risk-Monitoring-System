@@ -51,17 +51,20 @@ export function GISPage() {
   const { data: riskZones, isLoading } = useQuery({
     queryKey: ['risk-zones'],
     queryFn: dashboardService.getRiskZones,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: sensors } = useQuery({
     queryKey: ['sensors'],
     queryFn: sensorService.getSensors,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: heatGrid = [] } = useQuery({
     queryKey: ['heatmap-grid'],
     queryFn: fetchHeatGrid,
     staleTime: 60_000,
+    refetchInterval: 120_000,
   });
 
   const [activeLayers, setActiveLayers] = useState(layers);

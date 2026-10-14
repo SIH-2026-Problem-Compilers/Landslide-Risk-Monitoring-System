@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import config, grid, output_reader, runner, scorer, zones
 from .db import init_db as init_database
 from .routers.ingest import router as data_router
+from .routers.live import router as live_router
 from .runner import RunStore
 from .schemas import PredictRequest, RunCreate
 
@@ -48,7 +49,23 @@ store = RunStore()
 
 # Persisted platform data (sensor readings, reports, alerts, zone inputs).
 app.include_router(data_router)
+# Live NER data: zones, sensors, roads, dashboard, historical, notifications.
+app.include_router(live_router)
 init_database()
+
+# On startup, pull Open-Meteo weather for all NER zones so the model scorer
+# has real rain/wetness inputs from the very first prediction request.
+import threading as _threading
+
+def _startup_weather_refresh() -> None:
+    """Background task: fetch Open-Meteo data for every NER zone."""
+    try:
+        from .providers import openmeteo as _om
+        _om.ingest_all_zones()
+    except Exception:
+        pass  # Non-fatal — demo scorer fallback still works
+
+_threading.Thread(target=_startup_weather_refresh, daemon=True).start()
 
 
 # --------------------------------------------------------------------------

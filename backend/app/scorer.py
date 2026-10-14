@@ -35,19 +35,19 @@ MODEL_FEATURES = ["Lithology", "Slope", "pga", "gwetprof", "antecedent", "rain"]
 # These are fallback values — when real zone inputs exist (sensor readings /
 # IMD feed, see app/inputs.py) they take precedence.
 ZONE_PARAMS: dict[str, dict] = {
-    "rz-001": {"lithology": 6, "slope": 30, "pga": 0.01, "wetness": 0.02, "rain": 3},   # p~0.41 moderate
-    "rz-002": {"lithology": 5, "slope": 28, "pga": 0.01, "wetness": 0.02, "rain": 3},   # p~0.39 moderate
-    "rz-003": {"lithology": 5, "slope": 25, "pga": 0.01, "wetness": 0.28, "rain": 6},   # p~0.54 high
-    "rz-004": {"lithology": 6, "slope": 28, "pga": 0.01, "wetness": 0.28, "rain": 3},   # p~0.44 moderate
-    "rz-005": {"lithology": 6, "slope": 31, "pga": 0.01, "wetness": 0.28, "rain": 42},  # p~0.75 high
-    "rz-006": {"lithology": 5, "slope": 27, "pga": 0.01, "wetness": 0.12, "rain": 3},   # p~0.40 moderate
-    "rz-007": {"lithology": 7, "slope": 33, "pga": 0.01, "wetness": 0.36, "rain": 42},  # p~0.94 severe
-    "rz-008": {"lithology": 6, "slope": 31, "pga": 0.01, "wetness": 0.12, "rain": 30},  # p~0.62 high
-    "rz-009": {"lithology": 6, "slope": 32, "pga": 0.01, "wetness": 0.24, "rain": 30},  # p~0.68 high
-    "rz-010": {"lithology": 6, "slope": 30, "pga": 0.01, "wetness": 0.28, "rain": 3},   # p~0.46 moderate
-    "rz-011": {"lithology": 7, "slope": 34, "pga": 0.01, "wetness": 0.36, "rain": 6},   # p~0.89 severe
-    "rz-012": {"lithology": 6, "slope": 30, "pga": 0.01, "wetness": 0.22, "rain": 3},   # p~0.44 moderate
-    "rz-013": {"lithology": 5, "slope": 24, "pga": 0.01, "wetness": 0.02, "rain": 3},   # p~0.36 moderate
+    "rz-001": {"lithology": 5, "slope": 45.2, "pga": 0.4981, "wetness": 0.02, "rain": 3},   # p~0.41 moderate
+    "rz-002": {"lithology": 3, "slope": 11.7, "pga": 0.3564, "wetness": 0.02, "rain": 3},   # p~0.39 moderate
+    "rz-003": {"lithology": 3, "slope": 32.3, "pga": 0.5424, "wetness": 0.28, "rain": 6},   # p~0.54 high
+    "rz-004": {"lithology": 4, "slope": 30.4, "pga": 0.6623, "wetness": 0.28, "rain": 3},   # p~0.44 moderate
+    "rz-005": {"lithology": 5, "slope": 7.2, "pga": 0.525, "wetness": 0.28, "rain": 42},  # p~0.75 high
+    "rz-006": {"lithology": 4, "slope": 24.6, "pga": 0.4698, "wetness": 0.12, "rain": 3},   # p~0.40 moderate
+    "rz-007": {"lithology": 3, "slope": 30.9, "pga": 0.5718, "wetness": 0.36, "rain": 42},  # p~0.94 severe
+    "rz-008": {"lithology": 3, "slope": 38.1, "pga": 0.5398, "wetness": 0.12, "rain": 30},  # p~0.62 high
+    "rz-009": {"lithology": 4, "slope": 23.5, "pga": 0.559, "wetness": 0.24, "rain": 30},  # p~0.68 high
+    "rz-010": {"lithology": 4, "slope": 33.3, "pga": 0.5329, "wetness": 0.28, "rain": 3},   # p~0.46 moderate
+    "rz-011": {"lithology": 5, "slope": 46.1, "pga": 0.3754, "wetness": 0.36, "rain": 6},   # p~0.89 severe
+    "rz-012": {"lithology": 5, "slope": 40.0, "pga": 0.373, "wetness": 0.22, "rain": 3},   # p~0.44 moderate
+    "rz-013": {"lithology": 3, "slope": 5.8, "pga": 0.3782, "wetness": 0.02, "rain": 3},   # p~0.36 moderate
 }
 
 # Relative rain / wetness multipliers per forecast day (relative to today's

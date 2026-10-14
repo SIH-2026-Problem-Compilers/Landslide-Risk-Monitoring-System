@@ -1,14 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
-import { dashboardService } from '../services';
+import { liveDataService } from '../services';
 import { PageHeader } from '../components/ui/PageHeader';
 import { SeverityBadge } from '../components/ui/SeverityBadge';
-
+import { SkeletonCard } from '../components/ui/LoadingSkeleton';
 import {
-  Siren, Users, Building, Heart, ShieldAlert,
-  AlertTriangle,
+  Siren, Users, Building, Heart, ShieldAlert, AlertTriangle,
 } from 'lucide-react';
-import { emergencyZones } from '../data/mockData';
 import 'leaflet/dist/leaflet.css';
 
 const severityColors: Record<string, string> = {
@@ -19,14 +17,16 @@ const severityColors: Record<string, string> = {
 };
 
 export function EmergencyPage() {
-  const { data: _riskZones } = useQuery({
-    queryKey: ['risk-zones'],
-    queryFn: dashboardService.getRiskZones,
+  const { data: emergencyZones = [], isLoading } = useQuery({
+    queryKey: ['emergency-zones'],
+    queryFn: liveDataService.getEmergencyZones,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const totalPopAtRisk = emergencyZones.reduce((sum, z) => sum + z.populationAtRisk, 0);
   const totalHospitals = emergencyZones.reduce((sum, z) => sum + z.hospitals, 0);
   const totalShelters = emergencyZones.reduce((sum, z) => sum + z.shelters, 0);
+  const criticalCount = emergencyZones.filter(z => z.severity === 'severe').length;
 
   return (
     <div>
@@ -43,22 +43,24 @@ export function EmergencyPage() {
 
       {/* Critical Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: 'Critical Zones', value: emergencyZones.filter(z => z.severity === 'severe').length, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
-          { label: 'Population at Risk', value: totalPopAtRisk.toLocaleString(), icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' },
-          { label: 'Hospitals Nearby', value: totalHospitals, icon: Building, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Shelters Available', value: totalShelters, icon: Heart, color: 'text-green-600', bg: 'bg-green-50' },
-        ].map((stat) => (
-          <div key={stat.label} className={`${stat.bg} rounded-xl border border-gray-200 p-5`}>
-            <stat.icon className={`w-6 h-6 ${stat.color} mb-2`} />
-            <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-            <p className="text-sm text-gray-600 mt-0.5">{stat.label}</p>
-          </div>
-        ))}
+        {isLoading
+          ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+          : [
+              { label: 'Critical Zones', value: criticalCount, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
+              { label: 'Population at Risk', value: totalPopAtRisk.toLocaleString(), icon: Users, color: 'text-orange-600', bg: 'bg-orange-50' },
+              { label: 'Hospitals Nearby', value: totalHospitals, icon: Building, color: 'text-blue-600', bg: 'bg-blue-50' },
+              { label: 'Shelters Available', value: totalShelters, icon: Heart, color: 'text-green-600', bg: 'bg-green-50' },
+            ].map((stat) => (
+              <div key={stat.label} className={`${stat.bg} rounded-xl border border-gray-200 p-5`}>
+                <stat.icon className={`w-6 h-6 ${stat.color} mb-2`} />
+                <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                <p className="text-sm text-gray-600 mt-0.5">{stat.label}</p>
+              </div>
+            ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        {/* Emergency Map */}
+        {/* Emergency Map — NER centered */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ height: '400px' }}>
           <div className="p-3 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-800">Emergency Zones Map</h3>
@@ -68,8 +70,8 @@ export function EmergencyPage() {
             </span>
           </div>
           <MapContainer
-            center={[27.7, 85.5]}
-            zoom={8}
+            center={[26.0, 92.7]}
+            zoom={6}
             style={{ height: 'calc(100% - 44px)', width: '100%' }}
             scrollWheelZoom={true}
           >
@@ -81,7 +83,7 @@ export function EmergencyPage() {
               <CircleMarker
                 key={zone.id}
                 center={[zone.latitude, zone.longitude]}
-                radius={Math.max(10, Math.min(20, zone.populationAtRisk / 1000))}
+                radius={Math.max(10, Math.min(20, zone.populationAtRisk / 8000))}
                 pathOptions={{
                   color: severityColors[zone.severity],
                   fillColor: severityColors[zone.severity],
@@ -113,37 +115,41 @@ export function EmergencyPage() {
             Priority Ranking
           </h3>
           <div className="space-y-3">
-            {emergencyZones
-              .sort((a, b) => a.priorityRank - b.priorityRank)
-              .map((zone) => (
-                <div
-                  key={zone.id}
-                  className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                      zone.priorityRank <= 2 ? 'bg-red-500' : zone.priorityRank <= 4 ? 'bg-orange-500' : 'bg-yellow-500'
-                    }`}>
-                      {zone.priorityRank}
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="animate-pulse p-3 bg-gray-50 rounded-lg h-16" />
+                ))
+              : [...emergencyZones]
+                  .sort((a, b) => a.priorityRank - b.priorityRank)
+                  .map((zone) => (
+                    <div
+                      key={zone.id}
+                      className="p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                          zone.priorityRank <= 2 ? 'bg-red-500' : zone.priorityRank <= 4 ? 'bg-orange-500' : 'bg-yellow-500'
+                        }`}>
+                          {zone.priorityRank}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{zone.name}</p>
+                          <p className="text-xs text-gray-500">{zone.district}</p>
+                        </div>
+                        <SeverityBadge severity={zone.severity} size="sm" />
+                      </div>
+                      <div className="flex items-center gap-3 mt-2 ml-10 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {zone.populationAtRisk.toLocaleString()}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Building className="w-3 h-3" />
+                          {zone.hospitals}H {zone.shelters}S
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{zone.name}</p>
-                      <p className="text-xs text-gray-500">{zone.district}</p>
-                    </div>
-                    <SeverityBadge severity={zone.severity} size="sm" />
-                  </div>
-                  <div className="flex items-center gap-3 mt-2 ml-10 text-xs text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      {zone.populationAtRisk.toLocaleString()}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Building className="w-3 h-3" />
-                      {zone.hospitals}H {zone.shelters}S
-                    </span>
-                  </div>
-                </div>
-              ))}
+                  ))}
           </div>
         </div>
       </div>
@@ -160,6 +166,7 @@ export function EmergencyPage() {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-4 py-2 font-medium text-gray-600">Zone</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-600">Priority</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-600">Severity</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-600">Population</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-600">Impact</th>
                 <th className="text-left px-4 py-2 font-medium text-gray-600">Resources</th>
@@ -173,11 +180,14 @@ export function EmergencyPage() {
                     <p className="text-xs text-gray-500">{zone.district}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
                       zone.priorityRank <= 2 ? 'bg-red-500' : zone.priorityRank <= 4 ? 'bg-orange-500' : 'bg-yellow-500'
                     }`}>
                       {zone.priorityRank}
-                    </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <SeverityBadge severity={zone.severity} size="sm" />
                   </td>
                   <td className="px-4 py-3 font-medium">{zone.populationAtRisk.toLocaleString()}</td>
                   <td className="px-4 py-3">

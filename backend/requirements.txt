@@ -14,3 +14,4 @@ uvicorn[standard]>=0.30
 xgboost>=2.0
 numpy>=1.26
 sqlalchemy>=2.0
+python-dotenv>=1.0

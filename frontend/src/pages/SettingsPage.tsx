@@ -1,17 +1,46 @@
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '../components/ui/PageHeader';
 import { useAppStore } from '../store/useStore';
+import { mlService } from '../services';
 import {
-  Moon, Sun, Bell, Database, Shield, User, Globe,
+  Moon, Sun, Bell, Database, Shield, User, Globe, RefreshCw,
+  CheckCircle, AlertTriangle, Wifi,
 } from 'lucide-react';
 
 export function SettingsPage() {
   const { theme, toggleTheme, user, currentRole } = useAppStore();
+  const queryClient = useQueryClient();
   const [dataCleaning] = useState<Record<string, string>>({
     weather: 'completed',
     sensor: 'processing',
     satellite: 'idle',
   });
+
+  // Check if the backend is reachable
+  const { data: health, isLoading: healthLoading } = useQuery({
+    queryKey: ['api-health'],
+    queryFn: async () => {
+      const res = await fetch('/api/v1/health');
+      if (!res.ok) throw new Error('API unreachable');
+      return res.json() as Promise<Record<string, unknown>>;
+    },
+    retry: false,
+    staleTime: 30_000,
+  });
+
+  const weatherMutation = useMutation({
+    mutationFn: mlService.refreshWeather,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['predictions'] });
+      queryClient.invalidateQueries({ queryKey: ['forecasts'] });
+      queryClient.invalidateQueries({ queryKey: ['risk-zones'] });
+      queryClient.invalidateQueries({ queryKey: ['sensors'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+    },
+  });
+
+  const apiOnline = !!health && !healthLoading;
 
   return (
     <div>
@@ -86,6 +115,99 @@ export function SettingsPage() {
                 />
               </label>
             ))}
+          </div>
+        </div>
+
+        {/* Live Data Sources */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-800 mb-1 flex items-center gap-2">
+            <Wifi className="w-4 h-4 text-aztec" />
+            Live Data Sources
+          </h3>
+          <p className="text-xs text-gray-500 mb-4">
+            Real-time data status for the NER monitoring platform.
+          </p>
+          <div className="space-y-3">
+            {/* Backend API */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div>
+                <p className="text-sm font-medium text-gray-800">LHASA API (Backend)</p>
+                <p className="text-xs text-gray-400 font-mono">
+                  {import.meta.env.VITE_LHASA_API_URL || 'http://127.0.0.1:8000 (proxy)'}
+                </p>
+              </div>
+              {healthLoading ? (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Checking…</span>
+              ) : apiOnline ? (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> Online
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> Offline (mock fallback)
+                </span>
+              )}
+            </div>
+
+            {/* LHASA Model status */}
+            {health && (
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">LHASA Model (XGBoost)</p>
+                  <p className="text-xs text-gray-400">
+                    {(health.lhasa as Record<string, unknown>)?.['version'] as string ?? 'v2.1.1'} ·{' '}
+                    {(health.lhasa as Record<string, unknown>)?.['demo'] && ((health.lhasa as Record<string, unknown>)['demo'] as Record<string, unknown>)['enabled']
+                      ? 'Demo mode (Open-Meteo inputs)'
+                      : 'Live NASA run mode'}
+                  </p>
+                </div>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  ((health.lhasa as Record<string, unknown>)?.['model'] as Record<string, unknown>)?.['present']
+                    ? 'bg-green-50 text-green-700'
+                    : 'bg-red-50 text-red-700'
+                }`}>
+                  {((health.lhasa as Record<string, unknown>)?.['model'] as Record<string, unknown>)?.['present'] ? 'Model loaded' : 'Model missing'}
+                </span>
+              </div>
+            )}
+
+            {/* Open-Meteo weather */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Open-Meteo Weather Feed</p>
+                <p className="text-xs text-gray-400">
+                  {import.meta.env.VITE_OPEN_METEO_URL || 'https://api.open-meteo.com'} · Free · No key required
+                </p>
+              </div>
+              <button
+                onClick={() => weatherMutation.mutate()}
+                disabled={weatherMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-aztec text-white text-xs font-medium rounded-lg hover:bg-aztec/90 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${weatherMutation.isPending ? 'animate-spin' : ''}`} />
+                {weatherMutation.isPending ? 'Refreshing…' : 'Refresh Now'}
+              </button>
+            </div>
+            {weatherMutation.isSuccess && (
+              <p className="text-xs text-green-600 px-1">
+                ✓ Weather refreshed — {(weatherMutation.data as { updated?: number })?.updated ?? 0} zones updated. Predictions reloaded.
+              </p>
+            )}
+
+            {/* IMD feed */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div>
+                <p className="text-sm font-medium text-gray-800">IMD Rainfall Feed</p>
+                <p className="text-xs text-gray-400">
+                  {import.meta.env.VITE_LHASA_API_URL
+                    ? `${import.meta.env.VITE_LHASA_API_URL}/api/v1/data/imd/pull`
+                    : '/api/v1/data/imd/pull'} · Requires IMD_RAINFALL_URL in backend .env
+                </p>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+                Configure .env
+              </span>
+            </div>
           </div>
         </div>
 

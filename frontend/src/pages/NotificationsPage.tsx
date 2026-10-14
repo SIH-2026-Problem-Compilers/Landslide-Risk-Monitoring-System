@@ -28,11 +28,13 @@ export function NotificationsPage() {
   const { data: notifications, isLoading } = useQuery({
     queryKey: ['notifications'],
     queryFn: notificationService.getNotifications,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const { data: stats } = useQuery({
     queryKey: ['notification-stats'],
     queryFn: notificationService.getStats,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const channelData = stats

@@ -23,6 +23,7 @@ export function ReportsPage() {
   const { data: reports, isLoading } = useQuery({
     queryKey: ['citizen-reports'],
     queryFn: reportService.getReports,
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
   const [typeFilter, setTypeFilter] = useState<IncidentType | 'all'>('all');
