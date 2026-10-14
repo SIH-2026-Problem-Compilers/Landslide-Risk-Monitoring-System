@@ -3,6 +3,7 @@ import { sensorService } from '../services';
 import { PageHeader } from '../components/ui/PageHeader';
 import { StatusBadge } from '../components/ui/SeverityBadge';
 import { SkeletonCard } from '../components/ui/LoadingSkeleton';
+import { EmptyState } from '../components/ui/EmptyState';
 import {
   Radio, Droplets, CloudRain, Thermometer, Activity, Battery, Wifi, WifiOff,
 } from 'lucide-react';
@@ -36,9 +37,12 @@ export function SensorsPage() {
     refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
+  // Live data only — chart the first sensor the backend actually reports.
+  const primarySensor = sensors?.[0];
   const { data: readings } = useQuery({
-    queryKey: ['sensor-readings', 'SNS-001'],
-    queryFn: () => sensorService.getSensorReadings('SNS-001', 24),
+    queryKey: ['sensor-readings', primarySensor?.id],
+    queryFn: () => sensorService.getSensorReadings(primarySensor!.id, 24),
+    enabled: !!primarySensor,
     refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
@@ -81,29 +85,53 @@ export function SensorsPage() {
         ))}
       </div>
 
-      {/* Live Reading Chart */}
+      {/* Live Reading Chart — real stored readings only, never synthetic */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-        <h3 className="text-sm font-semibold text-gray-800 mb-4">Live Sensor Readings (24h)</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={readings || []}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis
-              dataKey="timestamp"
-              tick={{ fontSize: 10 }}
-              stroke="#94a3b8"
-              tickFormatter={(val) => new Date(val).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            />
-            <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
-            <Tooltip
-              contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}
-              labelFormatter={(val) => String(val) ? new Date(String(val)).toLocaleString() : ''}
-            />
-            <Line type="monotone" dataKey="value" stroke="#00B9F1" strokeWidth={2} dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-gray-800">
+            Live Sensor Readings (24h)
+            {primarySensor ? ` — ${primarySensor.name}` : ''}
+          </h3>
+          {primarySensor && (
+            <span className="text-xs text-gray-400">
+              {primarySensor.id} · {primarySensor.unit}
+            </span>
+          )}
+        </div>
+        {!readings?.length ? (
+          <div className="h-[200px] flex items-center justify-center text-sm text-gray-400 text-center px-4">
+            No live readings stored yet — the chart appears as soon as the
+            backend receives real data (Open-Meteo refresh or an IoT push).
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={readings}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis
+                dataKey="timestamp"
+                tick={{ fontSize: 10 }}
+                stroke="#94a3b8"
+                tickFormatter={(val) => new Date(val).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              />
+              <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+              <Tooltip
+                contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}
+                labelFormatter={(val) => String(val) ? new Date(String(val)).toLocaleString() : ''}
+              />
+              <Line type="monotone" dataKey="value" stroke="#00B9F1" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
-      {/* Sensor Grid */}
+      {/* Sensor Grid — live API data only (no mock fallback) */}
+      {!isLoading && (sensors?.length ?? 0) === 0 ? (
+        <EmptyState
+          icon={WifiOff}
+          title="No live sensor data"
+          description="The sensor network is fed by the backend: live Open-Meteo values for every zone, plus real readings pushed by ESP32 IoT stations. Start the API server (python backend/run.py) or push a reading to see stations here."
+        />
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading
           ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
@@ -140,18 +168,22 @@ export function SensorsPage() {
                     </div>
                     <div className="bg-gray-50 rounded-lg p-3">
                       <p className="text-xs text-gray-500">Battery</p>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              sensor.batteryLevel > 60 ? 'bg-green-500' :
-                              sensor.batteryLevel > 30 ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${sensor.batteryLevel}%` }}
-                          />
+                      {sensor.batteryLevel == null ? (
+                        <span className="text-sm text-gray-400">Not reported</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                sensor.batteryLevel > 60 ? 'bg-green-500' :
+                                sensor.batteryLevel > 30 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${sensor.batteryLevel}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700">{sensor.batteryLevel}%</span>
                         </div>
-                        <span className="text-sm font-medium text-gray-700">{sensor.batteryLevel}%</span>
-                      </div>
+                      )}
                     </div>
                   </div>
 
@@ -163,6 +195,7 @@ export function SensorsPage() {
               );
             })}
       </div>
+      )}
     </div>
   );
 }

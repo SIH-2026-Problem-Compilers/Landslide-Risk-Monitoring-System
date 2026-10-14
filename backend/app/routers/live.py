@@ -180,21 +180,27 @@ def dashboard_summary() -> dict:
         ).all()
         alert_count = len(active_alerts)
 
-        # Sensor stations: count distinct sensor_ids that have a reading in the
-        # last 2 hours (proxy for "online")
-        cutoff = _utcnow() - timedelta(hours=2)
-        recent_sensors = session.scalars(
+        # Sensor stations: derived stations count as online when their zone
+        # currently has live weather inputs; IoT stations count when they
+        # pushed a reading in the last 3 hours. No hard-coded fallback.
+        cutoff = _utcnow() - timedelta(hours=3)
+        recent_iot = session.scalars(
             select(SensorReading.sensor_id)
             .where(SensorReading.recorded_at >= cutoff)
             .distinct()
         ).all()
-        sensors_online = len(recent_sensors)
 
+    sensors_online = 0
+    for sensor in _MONITORING_SENSORS:
+        live = inputs.get_live(sensor["zone_id"])
+        if live and (live.get("rain") is not None or live.get("wetness") is not None):
+            sensors_online += 1
+    sensors_online += sum(1 for sid in recent_iot if sid not in _SENSOR_INDEX)
     return {
         "totalActiveAlerts": alert_count,
         "highRiskZones": high_risk,
         "moderateRiskZones": moderate_risk,
-        "sensorStationsOnline": sensors_online or 12,  # fallback to known sensor count
+        "sensorStationsOnline": sensors_online,
         "roadsBlocked": _count_blocked_roads(),
         "citizenReports": _count_recent_reports(),
         "lastUpdated": _utcnow().isoformat(),
@@ -447,14 +453,9 @@ def _build_sensor_reading(sensor_meta: dict) -> dict:
         "lastReading": last_reading,
         "unit": sensor_meta["unit"],
         "lastUpdated": _utcnow().isoformat(),
-        "batteryLevel": _mock_battery(sensor_meta["id"]),
+        # batteryLevel is intentionally omitted for derived stations: only
+        # real battery telemetry (IoT push) should ever appear, never a guess.
     }
-
-
-def _mock_battery(sensor_id: str) -> int:
-    """Deterministic pseudo-battery level so it doesn't bounce on every call."""
-    ordinal = int(sensor_id.replace("SNS-", "").lstrip("0") or "1")
-    return max(15, 95 - (ordinal * 7) % 80)
 
 
 def _discovered_iot_sensors() -> list[dict]:
@@ -503,7 +504,7 @@ def _discovered_iot_sensors() -> list[dict]:
                         "lastReading": round(float(latest.value), 2),
                         "unit": latest.unit,
                         "lastUpdated": latest.recorded_at.isoformat(),
-                        "batteryLevel": 100,  # not reported by the station yet
+                        # no batteryLevel: only emit real telemetry, never a guess
                     }
                 )
     except Exception:
@@ -529,7 +530,12 @@ def sensor_readings(
     sensor_id: str,
     hours: int = Query(default=24, ge=1, le=168),
 ) -> list[dict]:
-    """Time-series readings for a sensor from the DB; falls back to synthetic data."""
+    """Real time-series readings for a sensor from the DB.
+
+    Returns only stored measurements — no synthetic filler. An empty list
+    means nothing has been recorded for that sensor in the window (the
+    frontend renders an honest empty state).
+    """
     cutoff = _utcnow() - timedelta(hours=hours)
     try:
         with get_session() as session:
@@ -541,37 +547,16 @@ def sensor_readings(
                 )
                 .order_by(SensorReading.recorded_at)
             ).all()
-        if rows:
-            return [
-                {"timestamp": r.recorded_at.isoformat(), "value": round(float(r.value), 2), "unit": r.unit}
-                for r in rows
-            ]
     except Exception:
-        pass
-
-    # Synthetic fallback — generate plausible readings
-    meta = _SENSOR_INDEX.get(sensor_id)
-    unit = meta["unit"] if meta else "reading"
-    live = inputs.get_live(meta["zone_id"]) if meta else None
-
-    import math, random
-    random.seed(sensor_id)
-    now_ts = _utcnow()
-    base_val = 40.0
-    if live:
-        if meta["type"] == "rainfall" and live.get("rain") is not None:
-            base_val = float(live["rain"])
-        elif meta["type"] == "soil_moisture" and live.get("wetness") is not None:
-            base_val = float(live["wetness"]) * 100
-
-    readings = []
-    for i in range(hours, -1, -1):
-        ts = (now_ts - timedelta(hours=i)).isoformat()
-        noise = math.sin(i * 0.4) * 5 + random.gauss(0, 2)
-        readings.append(
-            {"timestamp": ts, "value": round(max(0.0, base_val + noise), 2), "unit": unit}
-        )
-    return readings
+        return []
+    return [
+        {
+            "timestamp": r.recorded_at.isoformat(),
+            "value": round(float(r.value), 2),
+            "unit": r.unit,
+        }
+        for r in rows
+    ]
 
 
 # ---------------------------------------------------------------------------

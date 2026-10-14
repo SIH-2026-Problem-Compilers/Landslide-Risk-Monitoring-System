@@ -1,12 +1,19 @@
 /**
  * Sensor service — live IoT sensor status and readings.
  *
- * Live path  : GET /api/v1/sensors  and  GET /api/v1/sensors/{id}/readings
- * Fallback   : mockData sensors + synthetic time-series
+ * Live path only — NO mock/synthetic fallback (sensor data is never faked):
+ *   GET /api/v1/sensors
+ *   GET /api/v1/sensors/{id}
+ *   GET /api/v1/sensors/{id}/readings?hours=24
+ *
+ * When the API is unreachable these methods resolve to empty results so the
+ * pages can render an honest "no live sensor data" state instead of dummy
+ * values. Sensor rows themselves are produced by the backend from live
+ * Open-Meteo zone inputs plus any ESP32 stations pushing real readings
+ * (see doc/IOT_INTEGRATION.md).
  */
-import { sensors } from '../data/mockData';
 import type { Sensor, SensorReading } from '../types';
-import { apiFetch, withFallback } from './api';
+import { apiFetch } from './api';
 
 function toSensor(raw: Record<string, unknown>): Sensor {
   return {
@@ -20,7 +27,8 @@ function toSensor(raw: Record<string, unknown>): Sensor {
     lastReading: Number(raw.lastReading ?? 0),
     unit: String(raw.unit ?? ''),
     lastUpdated: String(raw.lastUpdated ?? new Date().toISOString()),
-    batteryLevel: Number(raw.batteryLevel ?? 80),
+    // Only show battery telemetry that actually exists — never a placeholder.
+    batteryLevel: raw.batteryLevel == null ? undefined : Number(raw.batteryLevel),
   };
 }
 
@@ -32,51 +40,37 @@ function toReading(raw: Record<string, unknown>): SensorReading {
   };
 }
 
-/** Generate synthetic time-series when API is down (for chart rendering). */
-function syntheticReadings(hours: number): SensorReading[] {
-  const now = Date.now();
-  return Array.from({ length: hours + 1 }, (_, i) => ({
-    timestamp: new Date(now - (hours - i) * 3_600_000).toISOString(),
-    value: Math.round((Math.random() * 40 + 20) * 10) / 10,
-    unit: 'reading',
-  }));
-}
-
 export const sensorService = {
   async getSensors(): Promise<Sensor[]> {
-    return withFallback(
-      async () => {
-        const raw = await apiFetch<Record<string, unknown>[]>('/api/v1/sensors');
-        return raw.map(toSensor);
-      },
-      sensors,
-      'sensors',
-    );
+    try {
+      const raw = await apiFetch<Record<string, unknown>[]>('/api/v1/sensors');
+      return raw.map(toSensor);
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('[sensors] API unreachable:', err);
+      return [];
+    }
   },
 
   async getSensorById(id: string): Promise<Sensor | undefined> {
-    return withFallback(
-      async () => {
-        const raw = await apiFetch<Record<string, unknown>>(`/api/v1/sensors/${id}`);
-        return toSensor(raw);
-      },
-      sensors.find(s => s.id === id),
-      `sensors/${id}`,
-    );
+    try {
+      const raw = await apiFetch<Record<string, unknown>>(`/api/v1/sensors/${id}`);
+      return toSensor(raw);
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn(`[sensors] ${id} unreachable:`, err);
+      return undefined;
+    }
   },
 
   async getSensorReadings(sensorId: string, hours = 24): Promise<SensorReading[]> {
-    return withFallback(
-      async () => {
-        const raw = await apiFetch<Record<string, unknown>[]>(
-          `/api/v1/sensors/${sensorId}/readings?hours=${hours}`,
-        );
-        if (raw.length === 0) return syntheticReadings(hours);
-        return raw.map(toReading);
-      },
-      syntheticReadings(hours),
-      `sensors/${sensorId}/readings`,
-    );
+    try {
+      const raw = await apiFetch<Record<string, unknown>[]>(
+        `/api/v1/sensors/${sensorId}/readings?hours=${hours}`,
+      );
+      return raw.map(toReading);
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn(`[sensors] ${sensorId} readings unreachable:`, err);
+      return [];
+    }
   },
 
   async getOnlineSensorCount(): Promise<number> {

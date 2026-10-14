@@ -1,7 +1,6 @@
 import type {
   RiskZone,
   Alert,
-  Sensor,
   CitizenReport,
   Road,
   Notification,
@@ -29,7 +28,9 @@ export const dashboardSummary: DashboardSummary = {
   totalActiveAlerts: 18,
   highRiskZones: 6,
   moderateRiskZones: 7,
-  sensorStationsOnline: 96,
+  // Never fake sensor counts: 0 = "unknown/offline" until the API reports the
+  // real number (derived from live zone inputs + actual IoT readings).
+  sensorStationsOnline: 0,
   roadsBlocked: 9,
   citizenReports: 41,
   lastUpdated: new Date().toISOString(),
@@ -501,35 +502,11 @@ export const alerts: Alert[] = [
   },
 ];
 
-// ---- Sensors ----
-export const sensors: Sensor[] = [
-  { id: 'SNS-001', name: 'Aizawl Soil Moisture A', type: 'soil_moisture', status: 'online', latitude: 23.74, longitude: 92.72, district: 'Aizawl', lastReading: 86, unit: '%', lastUpdated: '2026-09-08T06:20:00Z', batteryLevel: 93 },
-  { id: 'SNS-002', name: 'Mangan Rain Gauge', type: 'rainfall', status: 'online', latitude: 27.52, longitude: 88.54, district: 'Mangan', lastReading: 48, unit: 'mm/hr', lastUpdated: '2026-09-08T06:18:00Z', batteryLevel: 88 },
-  { id: 'SNS-003', name: 'Shillong Rainfall Gauge', type: 'rainfall', status: 'online', latitude: 25.58, longitude: 91.89, district: 'East Khasi Hills', lastReading: 55, unit: 'mm/hr', lastUpdated: '2026-09-08T06:15:00Z', batteryLevel: 91 },
-  { id: 'SNS-004', name: 'Kohima Tilt Sensor', type: 'tilt', status: 'warning', latitude: 25.66, longitude: 94.10, district: 'Kohima', lastReading: 3.8, unit: '°', lastUpdated: '2026-09-08T06:10:00Z', batteryLevel: 52 },
-  { id: 'SNS-005', name: 'Haflong Moisture B', type: 'soil_moisture', status: 'offline', latitude: 25.17, longitude: 93.01, district: 'Dima Hasao', lastReading: 0, unit: '%', lastUpdated: '2026-09-07T18:00:00Z', batteryLevel: 9 },
-  { id: 'SNS-006', name: 'Lunglei Rainfall', type: 'rainfall', status: 'online', latitude: 22.89, longitude: 92.74, district: 'Lunglei', lastReading: 39, unit: 'mm/hr', lastUpdated: '2026-09-08T06:12:00Z', batteryLevel: 78 },
-  { id: 'SNS-007', name: 'Gangtok Seismic', type: 'seismic', status: 'online', latitude: 27.34, longitude: 88.63, district: 'Gangtok', lastReading: 0.2, unit: 'RMS', lastUpdated: '2026-09-08T06:05:00Z', batteryLevel: 84 },
-  { id: 'SNS-008', name: 'Senapati Moisture', type: 'soil_moisture', status: 'online', latitude: 25.27, longitude: 94.02, district: 'Senapati', lastReading: 58, unit: '%', lastUpdated: '2026-09-08T05:55:00Z', batteryLevel: 71 },
-  { id: 'SNS-009', name: 'Tura Tilt', type: 'tilt', status: 'online', latitude: 25.52, longitude: 90.21, district: 'West Garo Hills', lastReading: 1.2, unit: '°', lastUpdated: '2026-09-08T05:50:00Z', batteryLevel: 90 },
-  { id: 'SNS-010', name: 'Bomdila Rainfall', type: 'rainfall', status: 'online', latitude: 27.09, longitude: 92.41, district: 'West Kameng', lastReading: 18, unit: 'mm/hr', lastUpdated: '2026-09-08T05:45:00Z', batteryLevel: 82 },
-  { id: 'SNS-011', name: 'Dhalai Soil Moisture', type: 'soil_moisture', status: 'online', latitude: 23.94, longitude: 91.86, district: 'Dhalai', lastReading: 47, unit: '%', lastUpdated: '2026-09-08T05:40:00Z', batteryLevel: 76 },
-  { id: 'SNS-012', name: 'Itanagar Rain Gauge', type: 'rainfall', status: 'maintenance', latitude: 27.11, longitude: 93.63, district: 'Papum Pare', lastReading: 12, unit: 'mm/hr', lastUpdated: '2026-09-08T05:00:00Z', batteryLevel: 40 },
-  { id: 'SNS-014', name: 'Kalpa Tilt Sensor', type: 'tilt', status: 'online', latitude: 31.53, longitude: 78.26, district: 'Kinnaur', lastReading: 1.8, unit: '°', lastUpdated: '2026-09-08T06:05:00Z', batteryLevel: 88 },
-  { id: 'SNS-015', name: 'Shimla Rain Gauge', type: 'rainfall', status: 'online', latitude: 31.10, longitude: 77.17, district: 'Shimla', lastReading: 2, unit: 'mm/hr', lastUpdated: '2026-09-08T06:02:00Z', batteryLevel: 76 },
-  { id: 'SNS-016', name: 'Joshimath Moisture', type: 'soil_moisture', status: 'online', latitude: 30.55, longitude: 79.56, district: 'Chamoli', lastReading: 64, unit: '%', lastUpdated: '2026-09-08T06:01:00Z', batteryLevel: 82 },
-  { id: 'SNS-017', name: 'Rudraprayag Rain Gauge', type: 'rainfall', status: 'online', latitude: 30.26, longitude: 79.06, district: 'Rudraprayag', lastReading: 26, unit: 'mm/hr', lastUpdated: '2026-09-08T05:58:00Z', batteryLevel: 71 },
-  { id: 'SNS-018', name: 'Kishtwar Rain Gauge', type: 'rainfall', status: 'online', latitude: 33.31, longitude: 75.77, district: 'Kishtwar', lastReading: 9, unit: 'mm/hr', lastUpdated: '2026-09-08T05:55:00Z', batteryLevel: 67 },
-  { id: 'SNS-019', name: 'Anantnag Soil Moisture', type: 'soil_moisture', status: 'online', latitude: 33.73, longitude: 75.15, district: 'Anantnag', lastReading: 22, unit: '%', lastUpdated: '2026-09-08T05:52:00Z', batteryLevel: 91 },
-  { id: 'SNS-020', name: 'Darjeeling Rainfall', type: 'rainfall', status: 'online', latitude: 27.04, longitude: 88.26, district: 'Darjeeling', lastReading: 34, unit: 'mm/hr', lastUpdated: '2026-09-08T06:00:00Z', batteryLevel: 73 },
-  { id: 'SNS-021', name: 'Kalimpong Moisture', type: 'soil_moisture', status: 'warning', latitude: 27.22, longitude: 88.47, district: 'Kalimpong', lastReading: 71, unit: '%', lastUpdated: '2026-09-08T05:45:00Z', batteryLevel: 24 },
-  { id: 'SNS-022', name: 'Mahabaleshwar Rain Gauge', type: 'rainfall', status: 'online', latitude: 17.93, longitude: 73.66, district: 'Satara', lastReading: 41, unit: 'mm/hr', lastUpdated: '2026-09-08T05:50:00Z', batteryLevel: 85 },
-  { id: 'SNS-023', name: 'Mahad Moisture', type: 'soil_moisture', status: 'online', latitude: 18.09, longitude: 73.40, district: 'Raigad', lastReading: 58, unit: '%', lastUpdated: '2026-09-08T05:48:00Z', batteryLevel: 79 },
-  { id: 'SNS-024', name: 'Wayanad Soil Moisture', type: 'soil_moisture', status: 'online', latitude: 11.68, longitude: 76.13, district: 'Wayanad', lastReading: 92, unit: '%', lastUpdated: '2026-09-08T06:04:00Z', batteryLevel: 66 },
-  { id: 'SNS-025', name: 'Munnar Tilt Sensor', type: 'tilt', status: 'online', latitude: 9.85, longitude: 76.97, district: 'Idukki', lastReading: 2.4, unit: '°', lastUpdated: '2026-09-08T05:59:00Z', batteryLevel: 57 },
-  { id: 'SNS-026', name: 'Madikeri Rain Gauge', type: 'rainfall', status: 'online', latitude: 12.42, longitude: 75.74, district: 'Kodagu', lastReading: 18, unit: 'mm/hr', lastUpdated: '2026-09-08T05:57:00Z', batteryLevel: 74 },
-  { id: 'SNS-027', name: 'Nilgiris Soil Moisture', type: 'soil_moisture', status: 'online', latitude: 11.41, longitude: 76.69, district: 'The Nilgiris', lastReading: 69, unit: '%', lastUpdated: '2026-09-08T05:54:00Z', batteryLevel: 81 },
-];
+// NOTE: sensor rows are intentionally NOT mocked. The Sensors page, GIS map
+// and charts read only live data from GET /api/v1/sensors (backend combines
+// real Open-Meteo zone weather with any ESP32 stations pushing readings —
+// see doc/IOT_INTEGRATION.md). When the API is down they show an honest
+// empty state instead of fake values.
 
 // ---- Citizen Reports ----
 export const citizenReports: CitizenReport[] = [

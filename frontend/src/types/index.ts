@@ -93,7 +93,8 @@ export interface Sensor {
   lastReading: number;
   unit: string;
   lastUpdated: string;
-  batteryLevel: number;
+  /** Battery telemetry % — only present when a station actually reports it. */
+  batteryLevel?: number;
 }
 
 export interface SensorReading {
