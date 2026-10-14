@@ -457,9 +457,63 @@ def _mock_battery(sensor_id: str) -> int:
     return max(15, 95 - (ordinal * 7) % 80)
 
 
+def _discovered_iot_sensors() -> list[dict]:
+    """Sensors seen in the readings table that are not in the static list.
+
+    Lets ESP32 stations (doc/IOT_INTEGRATION.md) appear on the Sensors page
+    and GIS map simply by pushing readings — no code or restart needed.
+    Coordinates and district come from the zone the reading was tagged with.
+    """
+    try:
+        with get_session() as session:
+            sensor_ids = session.scalars(
+                select(SensorReading.sensor_id).distinct()
+            ).all()
+            recent_cutoff = _utcnow() - timedelta(hours=3)
+            result: list[dict] = []
+            for sensor_id in sensor_ids:
+                if sensor_id in _SENSOR_INDEX:
+                    continue
+                latest = session.scalars(
+                    select(SensorReading)
+                    .where(SensorReading.sensor_id == sensor_id)
+                    .order_by(desc(SensorReading.recorded_at))
+                    .limit(1)
+                ).first()
+                if latest is None:
+                    continue
+                is_recent = session.scalars(
+                    select(SensorReading.id)
+                    .where(
+                        SensorReading.sensor_id == sensor_id,
+                        SensorReading.recorded_at >= recent_cutoff,
+                    )
+                    .limit(1)
+                ).first()
+                zone = zones.zone_by_id(latest.zone_id)
+                result.append(
+                    {
+                        "id": sensor_id,
+                        "name": f"{sensor_id} ({latest.sensor_type.replace('_', ' ')})",
+                        "type": latest.sensor_type,
+                        "status": "online" if is_recent else "warning",
+                        "latitude": zone["latitude"] if zone else 0.0,
+                        "longitude": zone["longitude"] if zone else 0.0,
+                        "district": zone["district"] if zone else "",
+                        "lastReading": round(float(latest.value), 2),
+                        "unit": latest.unit,
+                        "lastUpdated": latest.recorded_at.isoformat(),
+                        "batteryLevel": 100,  # not reported by the station yet
+                    }
+                )
+    except Exception:
+        return []
+    return sorted(result, key=lambda sensor: sensor["id"])
+
+
 @router.get("/sensors")
 def list_sensors() -> list[dict]:
-    return [_build_sensor_reading(s) for s in _MONITORING_SENSORS]
+    return [_build_sensor_reading(s) for s in _MONITORING_SENSORS] + _discovered_iot_sensors()
 
 
 @router.get("/sensors/{sensor_id}")

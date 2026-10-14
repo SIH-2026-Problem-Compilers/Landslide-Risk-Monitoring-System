@@ -3,15 +3,23 @@
 Everything under ``/api/v1``. These endpoints persist real data collected
 from sensors, IMD weather feeds and citizen/field reports, and let the model
 scorer consume it.
+
+IoT stations (ESP32 + soil-moisture/temperature sensors, see
+``doc/IOT_INTEGRATION.md``) push to ``/sensors/readings`` (single) or
+``/sensors/readings/batch`` (one HTTP call per wake cycle). Set the env var
+``SENSOR_INGEST_TOKEN`` to require ``X-Sensor-Token: <token>`` (or
+``?token=``) on those endpoints; with no token configured they stay open,
+exactly as before.
 """
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 
@@ -49,6 +57,12 @@ class ZoneInputUpdate(BaseModel):
 
 class ImdRows(BaseModel):
     rows: list[dict]
+
+
+class SensorReadingBatch(BaseModel):
+    """One HTTP call carrying every reading from an IoT wake cycle."""
+
+    readings: list[SensorReadingCreate] = Field(min_length=1, max_length=50)
 
 
 class ReportCreate(BaseModel):
@@ -115,11 +129,26 @@ def _alert_to_dict(alert: models.AlertRecord) -> dict:
 # --------------------------------------------------------------------------
 # sensor readings
 # --------------------------------------------------------------------------
-@router.post("/sensors/readings")
-def add_reading(payload: SensorReadingCreate) -> dict:
-    zone = zones.zone_by_id(payload.zone_id)
-    if zone is None:
-        raise HTTPException(status_code=404, detail="Unknown zone_id")
+def _require_ingest_token(
+    x_sensor_token: Optional[str] = Header(default=None),
+    token: Optional[str] = Query(default=None),
+) -> None:
+    """Optional shared-secret for IoT pushes (env SENSOR_INGEST_TOKEN).
+
+    No env var configured -> ingestion stays open (existing behaviour).
+    """
+    expected = os.environ.get("SENSOR_INGEST_TOKEN", "").strip()
+    if not expected:
+        return
+    if x_sensor_token == expected or token == expected:
+        return
+    raise HTTPException(status_code=401, detail="Invalid or missing sensor ingest token")
+
+
+def _store_reading(payload: SensorReadingCreate) -> str | None:
+    """Persist one reading; returns an error string for invalid zone ids."""
+    if zones.zone_by_id(payload.zone_id) is None:
+        return f"Unknown zone_id: {payload.zone_id}"
     reading = models.SensorReading(
         sensor_id=payload.sensor_id,
         zone_id=payload.zone_id,
@@ -131,8 +160,49 @@ def add_reading(payload: SensorReadingCreate) -> dict:
     with get_session() as session:
         session.add(reading)
         session.commit()
+    # soil moisture (percent) -> wetness, rainfall -> rain; feeds the scorer
     inputs.refresh_zone_from_readings(payload.zone_id)
+    return None
+
+
+@router.post("/sensors/readings", dependencies=[Depends(_require_ingest_token)])
+def add_reading(payload: SensorReadingCreate) -> dict:
+    error = _store_reading(payload)
+    if error:
+        raise HTTPException(status_code=404, detail=error)
     return {"ok": True, "zone_id": payload.zone_id}
+
+
+@router.post("/sensors/readings/batch", dependencies=[Depends(_require_ingest_token)])
+def add_readings_batch(payload: SensorReadingBatch) -> dict:
+    """Store several readings at once (ESP32 posts soil + climate per wake).
+
+    Zone inputs are refreshed once per affected zone, so a batch is cheaper
+    than N single calls. Invalid zone ids are reported per row, not fatal.
+    """
+    stored = 0
+    errors: list[str] = []
+    zones_touched: set[str] = set()
+    for reading in payload.readings:
+        if zones.zone_by_id(reading.zone_id) is None:
+            errors.append(f"Unknown zone_id: {reading.zone_id}")
+            continue
+        stored_reading = models.SensorReading(
+            sensor_id=reading.sensor_id,
+            zone_id=reading.zone_id,
+            sensor_type=reading.sensor_type,
+            value=reading.value,
+            unit=reading.unit,
+            recorded_at=reading.recorded_at or _utcnow(),
+        )
+        with get_session() as session:
+            session.add(stored_reading)
+            session.commit()
+        zones_touched.add(reading.zone_id)
+        stored += 1
+    for zone_id in zones_touched:
+        inputs.refresh_zone_from_readings(zone_id)
+    return {"ok": stored > 0, "stored": stored, "errors": errors}
 
 
 @router.get("/sensors/readings")

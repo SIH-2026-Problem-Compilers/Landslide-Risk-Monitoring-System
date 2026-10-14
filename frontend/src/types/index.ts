@@ -85,7 +85,7 @@ export type SensorStatus = 'online' | 'offline' | 'maintenance' | 'warning';
 export interface Sensor {
   id: string;
   name: string;
-  type: 'soil_moisture' | 'rainfall' | 'temperature' | 'tilt' | 'seismic';
+  type: 'soil_moisture' | 'rainfall' | 'temperature' | 'humidity' | 'tilt' | 'seismic';
   status: SensorStatus;
   latitude: number;
   longitude: number;

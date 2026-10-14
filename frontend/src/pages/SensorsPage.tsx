@@ -15,6 +15,7 @@ const sensorTypeIcons: Record<string, typeof Radio> = {
   soil_moisture: Droplets,
   rainfall: CloudRain,
   temperature: Thermometer,
+  humidity: Droplets, // DHT11 stations pushed by the ESP32 IoT firmware
   tilt: Activity,
   seismic: Activity,
 };
@@ -23,6 +24,7 @@ const sensorTypeColors: Record<string, string> = {
   soil_moisture: 'text-blue-500 bg-blue-50',
   rainfall: 'text-cyan-500 bg-cyan-50',
   temperature: 'text-orange-500 bg-orange-50',
+  humidity: 'text-teal-500 bg-teal-50',
   tilt: 'text-purple-500 bg-purple-50',
   seismic: 'text-red-500 bg-red-50',
 };
@@ -49,7 +51,7 @@ export function SensorsPage() {
     <div>
       <PageHeader
         title="Sensor Monitoring"
-        subtitle="Real-time IoT sensor network status and readings"
+        subtitle="Live network status — NER/Himalaya/Ghats stations + any ESP32 IoT station pushing to the API"
         actions={
           <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
