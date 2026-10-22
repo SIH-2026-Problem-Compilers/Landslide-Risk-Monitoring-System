@@ -160,9 +160,11 @@ first and falls back to `mockData.ts`).
 ### C. Seismicity (pga is a LHASA input; quakes raise slope risk)
 
 #### C1. USGS Earthquake Feed — ✅ wired (no key)
-* **Portal:** <https://earthquake.usgs.gov/fdsnws/event/1/> · GeoJSON feeds:
-  <https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/1.0_day.geojson>
-* **Env:** `USGS_FEED_URL` (other feeds: `all_day`, `all_week`,
+* **Portal:** <https://earthquake.usgs.gov/fdsnws/event/1/> · GeoJSON feeds
+  (<https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/1.0_day.geojson>,
+  default here: `all_week.geojson` — the past-day feed is frequently empty
+  over the India bbox, which would render the map layer blank).
+* **Env:** `USGS_FEED_URL` (other feeds: `all_day`, `1.0_day`,
   `significant_week`), `USGS_BBOX=west,south,east,north` (defaults to the
   project's India bbox).
 * **In this repo:** `backend/app/providers/seismic.py` →
@@ -326,7 +328,7 @@ IMD_API_KEY=
 IMD_API_KEY_HEADER=X-API-Key
 
 # ---- seismic (live today, no key) ----
-USGS_FEED_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/1.0_day.geojson
+USGS_FEED_URL=https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson
 USGS_BBOX=68.0,6.5,97.5,36.5   # west,south,east,north (default = project bbox)
 
 # ---- alert delivery (pre-wired: providers/notify.py) ----

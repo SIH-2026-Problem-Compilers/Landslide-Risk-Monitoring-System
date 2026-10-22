@@ -100,8 +100,9 @@ export function SensorsPage() {
         </div>
         {!readings?.length ? (
           <div className="h-[200px] flex items-center justify-center text-sm text-gray-400 text-center px-4">
-            No live readings stored yet — the chart appears as soon as the
-            backend receives real data (Open-Meteo refresh or an IoT push).
+            No live readings stored yet — this chart plots real stored
+            measurements only. It fills in the moment an IoT station pushes to
+            POST /api/v1/sensors/readings (never synthetic data).
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={200}>

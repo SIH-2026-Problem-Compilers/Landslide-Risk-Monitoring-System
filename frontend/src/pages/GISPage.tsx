@@ -35,7 +35,7 @@ const layers = [
   { id: 'hospitals', name: 'Hospitals', visible: false },
   { id: 'schools', name: 'Schools', visible: false },
   { id: 'bridges', name: 'Bridges', visible: false },
-  { id: 'sensors', name: 'Sensors', visible: true },
+  { id: 'sensors', name: 'Sensors', visible: false },
 ];
 
 // Key-free basemaps: OSM streets + Esri World Imagery (satellite).
@@ -253,7 +253,7 @@ export function GISPage() {
                             <p className="text-xs"><strong>Type:</strong> {sensor.type.replace(/_/g, ' ')}</p>
                             <p className="text-xs"><strong>Status:</strong> {sensor.status}</p>
                             <p className="text-xs"><strong>Reading:</strong> {sensor.lastReading} {sensor.unit}</p>
-                            <p className="text-xs"><strong>Battery:</strong> {sensor.batteryLevel}%</p>
+                            <p className="text-xs"><strong>Battery:</strong> {sensor.batteryLevel == null ? 'Not reported' : `${sensor.batteryLevel}%`}</p>
                           </div>
                         </div>
                       </Popup>

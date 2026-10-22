@@ -6,8 +6,8 @@ landslide risk. The USGS GeoJSON feeds are free, public and updated
 continuously — no registration, no key.
 
 Environment variables:
-  USGS_FEED_URL  override the feed (default: USGS "all earthquakes, past day",
-                 https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/1.0_day.geojson)
+  USGS_FEED_URL  override the feed (default: USGS "all earthquakes, past week",
+                 https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson)
   USGS_BBOX      comma-separated "west,south,east,north" clip box
                  (defaults to the project's all-India DEFAULT_BBOX)
 
@@ -27,7 +27,9 @@ from .. import config
 
 USGS_FEED = os.environ.get(
     "USGS_FEED_URL",
-    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/1.0_day.geojson",
+    # 7-day feed: the past-day feed is often empty over the India bbox
+    # (no M2.5+ events in 24h), which would render the map layer blank.
+    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson",
 )
 _bbox_env = os.environ.get("USGS_BBOX", "").strip()
 if _bbox_env:
