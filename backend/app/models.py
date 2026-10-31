@@ -62,6 +62,34 @@ class SensorReading(Base):
     )
 
 
+class SensorStation(Base):
+    """Registry entry for one physical / edge sensor station.
+
+    Created automatically the first time a station pushes a reading (or a
+    heartbeat), so the Sensors page and GIS map show only stations that
+    actually exist. ``latitude``/``longitude`` come from the station's own GPS
+    when it has one, otherwise from the laptop GPS of the host that bridges it
+    (``location_source`` records which). ``channels`` is a JSON list of the
+    station's individual sensor channels (e.g. soil + temperature + humidity).
+    """
+
+    __tablename__ = "sensor_stations"
+
+    station_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), default="")
+    zone_id: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    location_source: Mapped[str] = mapped_column(String(24), default="unknown")
+    location_accuracy_m: Mapped[float | None] = mapped_column(Float, nullable=True)
+    battery_level: Mapped[float | None] = mapped_column(Float, nullable=True)
+    channels: Mapped[str] = mapped_column(Text, default="[]")  # JSON list
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    last_seen: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, index=True
+    )
+
+
 class CitizenReport(Base):
     """Geo-tagged citizen / field-official report (cracks, blockages, slides)."""
 

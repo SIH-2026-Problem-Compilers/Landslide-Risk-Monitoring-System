@@ -53,7 +53,13 @@ static const char* INGEST_TOKEN  = "";
 // Identity: one station id + the monitoring zone it belongs to
 // (zone ids: rz-001 .. rz-027, see backend/app/zones.py)
 static const char* STATION_ID    = "ESP32-A01";   // becomes ESP32-A01-SOIL, -TEMP, -HUM
+static const char* STATION_NAME  = "My ESP32 field station";
 static const char* ZONE_ID       = "rz-016";      // e.g. Joshimath Slopes (Chamoli)
+
+// Optional on-board GPS module (e.g. NEO-6M). Leave both at 0 to use the
+// laptop GPS fallback supplied by the dashboard's browser bridge.
+static const float STATION_LATITUDE  = 0.0f;
+static const float STATION_LONGITUDE = 0.0f;
 
 // Send cadence & power
 static const int   SEND_INTERVAL_MIN = 10;   // minutes between uploads
@@ -249,26 +255,45 @@ void setup() {
   Serial.printf("[soil] %.1f %%  [dht] %.1f C / %.1f %%\n",
                 soilPct, airTemp, airHum);
 
-  // --- push to backend -----------------------------------------------------
-  bool pushed = false;
-  if (connectWifi()) {
-    JsonDocument doc;
-    JsonArray readings = doc["readings"].to<JsonArray>();
+  // --- build the telemetry batch ------------------------------------------
+  JsonDocument doc;
+  JsonArray readings = doc["readings"].to<JsonArray>();
 
-    // soil moisture is the value the LHASA model actually consumes
-    addReading(readings, "SOIL", "soil_moisture", soilPct, "%");
-    if (dhtOk) {
-      addReading(readings, "TEMP", "temperature", airTemp, "C");
-      addReading(readings, "HUM",  "humidity",    airHum,  "%");
-    }
+  // soil moisture is the value the LHASA model actually consumes
+  addReading(readings, "SOIL", "soil_moisture", soilPct, "%");
+  if (dhtOk) {
+    addReading(readings, "TEMP", "temperature", airTemp, "C");
+    addReading(readings, "HUM",  "humidity",    airHum,  "%");
+  }
 #ifdef USE_LM35
-    addReading(readings, "LM35", "temperature", lm35, "C");
+  addReading(readings, "LM35", "temperature", lm35, "C");
 #endif
 #ifdef USE_ACS712
-    // power health of the cabinet: 0 A == mains dead (falling back to battery)
-    addReading(readings, "PWR", "seismic", amps, "A");  // parked as generic channel
+  // power health of the cabinet: 0 A == mains dead (falling back to battery)
+  addReading(readings, "PWR", "seismic", amps, "A");  // parked as generic channel
 #endif
 
+  // Station metadata: lets the backend show one station (not one row per
+  // channel) and use the station's own GPS when it has one.
+  JsonObject station = doc["station"].to<JsonObject>();
+  station["station_id"] = STATION_ID;
+  station["name"]       = STATION_NAME;
+  station["zone_id"]    = ZONE_ID;
+  if (STATION_LATITUDE != 0.0f || STATION_LONGITUDE != 0.0f) {
+    station["latitude"]        = STATION_LATITUDE;
+    station["longitude"]       = STATION_LONGITUDE;
+    station["location_source"] = "sensor_gps";
+  }
+
+  // --- USB bridge output ---------------------------------------------------
+  // One machine-readable JSON line per cycle. Chrome's Web Serial bridge on
+  // the dashboard reads this when no Wi-Fi is available (serial 115200).
+  serializeJson(doc, Serial);
+  Serial.println();
+
+  // --- push to backend over Wi-Fi -----------------------------------------
+  bool pushed = false;
+  if (connectWifi()) {
     pushed = pushReadings(doc);
   }
   WiFi.disconnect(true);

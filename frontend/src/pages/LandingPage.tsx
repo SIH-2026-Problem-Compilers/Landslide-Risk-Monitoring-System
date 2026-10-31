@@ -20,14 +20,14 @@ import {
 const features = [
   { icon: Brain, title: 'AI-Powered Prediction', description: 'Machine learning models analyze rainfall, soil, and seismic data to predict landslides hours in advance.' },
   { icon: MapPin, title: 'GIS Risk Mapping', description: 'Interactive maps with real-time risk zones, sensor locations, and infrastructure overlays.' },
-  { icon: Radio, title: 'IoT Sensor Network', description: '142+ sensor stations monitoring soil moisture, rainfall, tilt, and seismic activity 24/7.' },
+  { icon: Radio, title: 'IoT Sensor Network', description: 'Connected stations stream real soil moisture, rainfall, tilt, and seismic readings 24/7.' },
   { icon: Bell, title: 'Multi-Channel Alerts', description: 'Instant notifications via SMS, Email, WhatsApp, and IVR to reach every citizen.' },
   { icon: BarChart3, title: 'Risk Analytics', description: 'Comprehensive dashboards with trend analysis, district comparisons, and rainfall correlation.' },
   { icon: Users, title: 'Citizen Reporting', description: 'Empowering citizens to report incidents with photos and location for rapid verification.' },
 ];
 
 const stats = [
-  { value: '142+', label: 'Sensor Stations' },
+  { value: 'Live', label: 'Sensor Stations' },
   { value: '8', label: 'Districts Monitored' },
   { value: '24/7', label: 'Real-time Monitoring' },
   { value: '5', label: 'Alert Channels' },

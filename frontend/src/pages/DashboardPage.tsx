@@ -53,7 +53,7 @@ export function DashboardPage() {
         { title: 'Active Alerts', value: summary.totalActiveAlerts, icon: AlertTriangle, color: 'text-red-500', bgColor: 'bg-red-50', change: 15 },
         { title: 'High Risk Zones', value: summary.highRiskZones, icon: MapPin, color: 'text-orange-500', bgColor: 'bg-orange-50', change: 8 },
         { title: 'Moderate Risk Zones', value: summary.moderateRiskZones, icon: TrendingUp, color: 'text-yellow-500', bgColor: 'bg-yellow-50', change: -3 },
-        { title: 'Sensors Online', value: summary.sensorStationsOnline, icon: Radio, color: 'text-green-500', bgColor: 'bg-green-50', change: 2 },
+        { title: 'Sensors Online', value: summary.sensorStationsOnline, icon: Radio, color: 'text-green-500', bgColor: 'bg-green-50' },
         { title: 'Roads Blocked', value: summary.roadsBlocked, icon: Route, color: 'text-purple-500', bgColor: 'bg-purple-50', change: 3 },
         { title: 'Citizen Reports', value: summary.citizenReports, icon: FileText, color: 'text-blue-500', bgColor: 'bg-blue-50', change: 12 },
       ]

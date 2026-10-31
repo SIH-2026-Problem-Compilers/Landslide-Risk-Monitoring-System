@@ -14,6 +14,8 @@ model) at each zone's coordinates.
 """
 from __future__ import annotations
 
+from math import asin, cos, radians, sin, sqrt
+
 MONITORING_ZONES: list[dict] = [
     # ---- Arunachal Pradesh ----
     {
@@ -286,3 +288,26 @@ def zone_by_id(zone_id: str) -> dict | None:
 
 def zones_by_ids(zone_ids: list[str]) -> list[dict]:
     return [z for z in MONITORING_ZONES if z["id"] in zone_ids]
+
+
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance between two WGS84 points, in kilometres."""
+    radius = 6371.0088
+    dlat = radians(lat2 - lat1)
+    dlon = radians(lon2 - lon1)
+    a = (
+        sin(dlat / 2) ** 2
+        + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    )
+    return 2 * radius * asin(sqrt(a))
+
+
+def nearest_zone(lat: float, lon: float) -> tuple[dict, float]:
+    """Closest monitoring zone to a coordinate: ``(zone, distance_km)``."""
+    closest = MONITORING_ZONES[0]
+    closest_km = haversine_km(lat, lon, closest["latitude"], closest["longitude"])
+    for zone in MONITORING_ZONES[1:]:
+        distance = haversine_km(lat, lon, zone["latitude"], zone["longitude"])
+        if distance < closest_km:
+            closest, closest_km = zone, distance
+    return closest, closest_km

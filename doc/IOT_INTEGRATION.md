@@ -175,12 +175,45 @@ Sketch: **`hardware/esp32/lhasa_station/lhasa_station.ino`**
    | `API_HOST` / `API_PORT` | LAN IP of the machine running `backend/run.py` (find it with `ipconfig`), port 8000. ESP32 talks to FastAPI **directly**, not through the Vite dev proxy. |
    | `INGEST_TOKEN` | must match `SENSOR_INGEST_TOKEN` in `backend/.env` (leave both empty to disable auth) |
    | `STATION_ID` | e.g. `ESP32-A01` → readings are named `ESP32-A01-SOIL`, `-TEMP`, `-HUM` |
+   | `STATION_NAME` | human-readable name shown on the Sensors page and GIS popup |
    | `ZONE_ID` | the monitoring zone this station measures — ids `rz-001`…`rz-027` (`backend/app/zones.py`) |
+   | `STATION_LATITUDE` / `STATION_LONGITUDE` | **optional**: set these only if the board has a GPS module; leave `0` to use the laptop GPS fallback |
    | `SEND_INTERVAL_MIN` / `USE_DEEP_SLEEP` | upload cadence & power mode |
    | `USE_LM35` / `USE_ACS712` | uncomment the optional sensors you wired |
    | `SOIL_DRY_RAW` / `SOIL_WET_RAW` | your HW-103 calibration |
 4. **Flash** (USB cable): Upload → open **Serial Monitor at 115200 baud** —
-   you should see the Wi-Fi join, the JSON payload and the server's `200 OK`.
+   you should see the Wi-Fi join, one JSON telemetry line, and the server's
+   `200 OK`.
+
+### 4.1 USB-only demo (no Wi-Fi / no GPS module)
+
+The sketch prints one machine-readable JSON line per cycle, e.g.
+
+```json
+{"readings":[{"sensor_id":"ESP32-A01-SOIL","zone_id":"rz-016","sensor_type":"soil_moisture","value":47.5,"unit":"%"}],"station":{"station_id":"ESP32-A01","name":"My ESP32 field station","zone_id":"rz-016"}}
+```
+
+1. For USB use set `USE_DEEP_SLEEP = false` and `SEND_INTERVAL_MIN = 1`, then
+   reflash — deep sleep powers down the USB serial interface, so the bridge
+   needs continuous power. (Wi-Fi deployments keep deep sleep enabled.)
+2. Backend and frontend running; open the dashboard **Sensors** page in
+   Chrome/Edge on `http://127.0.0.1:5173`.
+3. Allow the browser location prompt (Windows/macOS location services). The
+   **Laptop GPS** panel shows the fix and its accuracy.
+4. Plug the board in over USB and click **Connect sensor** → pick the COM port.
+   Press the board's **EN/RST** button once so it prints an immediate reading.
+5. Every JSON line is posted to `POST /api/v1/sensors/ingest` together with the
+   laptop position. Because the board has no GPS module, the station is shown
+   with `location_source = laptop_gps`, and the **GIS → Sensors** layer places
+   it at the laptop's current coordinates.
+
+No Wi-Fi credentials are needed for this path. Reading values remain real
+sensor measurements — the browser never fabricates data.
+
+If `SENSOR_INGEST_TOKEN` is set in `backend/.env`, also create
+`frontend/.env.local` with the same value as `VITE_SENSOR_TOKEN` so the
+browser bridge can authenticate. With no token configured (the default), no
+frontend setting is needed.
 
 ---
 
@@ -195,6 +228,19 @@ python run.py           # http://127.0.0.1:8000
 
 Nothing else — `POST /api/v1/sensors/readings(/batch)` stores rows in the
 existing `sensor_readings` table and refreshes the zone's live inputs.
+
+Station registry endpoints used by the dashboard:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/v1/sensors/ingest` | one station's reading batch, zone resolved from GPS |
+| POST | `/api/v1/sensors/heartbeat` | laptop GPS / station liveness ping |
+| GET | `/api/v1/sensors` | real registered stations only (no static list) |
+
+The registry table `sensor_stations` is created automatically on startup and
+stores station id, name, zone, coordinates, location source (sensor/laptop/
+manual/zone), accuracy, channels and last-seen time. A station only appears on
+the Sensors page after it has pushed at least one real reading.
 
 ---
 
@@ -220,8 +266,9 @@ existing `sensor_readings` table and refreshes the zone's live inputs.
    wait one upload cycle → zone `wetness` rises and the risk score on
    `/predictions` (Predictions page) moves up. Dry the probe → it falls.
 6. Frontend: open **Sensors** page → `ESP32-A01-SOIL/TEMP/HUM` cards appear
-   within the poll interval (default 60 s) with live values and a 24 h chart;
-   the **GIS** page shows the station marker at its zone's coordinates.
+   within one poll interval with live values and a 24 h chart. The **GIS** page
+   → **Sensors** layer shows the station at the sensor's own GPS if configured,
+   otherwise at the laptop's current GPS position (fallback).
 
 **Token test (if enabled)**
 

@@ -503,10 +503,10 @@ export const alerts: Alert[] = [
 ];
 
 // NOTE: sensor rows are intentionally NOT mocked. The Sensors page, GIS map
-// and charts read only live data from GET /api/v1/sensors (backend combines
-// real Open-Meteo zone weather with any ESP32 stations pushing readings —
-// see doc/IOT_INTEGRATION.md). When the API is down they show an honest
-// empty state instead of fake values.
+// and charts read only live data from GET /api/v1/sensors (stations that
+// actually pushed readings, positioned by their own GPS or the laptop GPS
+// fallback — see doc/IOT_INTEGRATION.md). When the API is down they show an
+// honest empty state instead of fake values.
 
 // ---- Citizen Reports ----
 export const citizenReports: CitizenReport[] = [

@@ -1,0 +1,8 @@
+first understand this project then do following task:-
+
+currently in sensor monitoring tab it is showing 27 Online senors you have to replce all thing things with real data
+when i connect my sensor then it should show the data like Online senors and in my senors i will use gps sensor to see 
+senosr location but currently it is not available but i want to demonstrate this project in my college so for that
+i will going to use my sensor and my laptop gps location so in live dashboard when i see GIS monitoring tab in map 
+should able to see senor on my location when i enable "sensor" in Map Layers and in other pridiction based on live api
+also should work dont change that functionality just add my senors functionality to demonstrate in lap exam

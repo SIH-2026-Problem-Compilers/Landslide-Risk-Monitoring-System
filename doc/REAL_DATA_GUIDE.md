@@ -258,24 +258,19 @@ real sensor readings and the model is scored on your data:
 
 ### 5.2 Zone ↔ sensor mapping
 
-Each monitored zone has a district; sensors are declared once in
-`backend/app/routers/live.py` (`_MONITORING_SENSORS`, mirrored by
-`frontend/src/data/mockData.ts`). Every zone rz-001…rz-027 has at least one
-sensor; examples:
+There is **no static sensor list**. A station is registered automatically the
+first time it pushes a reading (`backend/app/sensors.py`, table
+`sensor_stations`), and its monitoring zone is chosen in this order:
 
-| Zone | District | Sensor(s) |
-|---|---|---|
-| rz-001 Bomdila Slopes | West Kameng | SNS-010 (rainfall) |
-| rz-005 Shillong Plateau Edge | East Khasi Hills | SNS-003 (rainfall) |
-| rz-007 Aizawl Escarpment | Aizawl | SNS-001 (soil moisture) |
-| rz-011 Mangan NH-10 Corridor | Mangan | SNS-002 (rainfall) |
-| rz-014 Kinnaur Valleys | Kinnaur | SNS-014 (tilt) |
-| rz-016 Joshimath Slopes | Chamoli | SNS-016 (soil moisture) |
-| rz-020 Darjeeling Himalaya | Darjeeling | SNS-020 (rainfall) |
-| rz-024 Wayanad Ghats | Wayanad | SNS-024 (soil moisture) |
-| rz-027 Nilgiri Slopes | The Nilgiris | SNS-027 (soil moisture) |
+1. the `zone_id` the station sends,
+2. otherwise the nearest zone to its coordinates, but only within 50 km,
+3. otherwise no zone — the reading is stored and mapped without changing any
+   zone's model inputs.
 
-*(Full list: `_MONITORING_SENSORS` in `backend/app/routers/live.py`.)*
+Station position is resolved in this order: the station's own GPS, then the
+laptop GPS reported by the dashboard (`POST /api/v1/sensors/heartbeat`), then
+manual coordinates. Legacy readings with no known position are registered once
+at their zone centre and labelled `zone` (estimate).
 
 ### 5.3 How to wire it
 
@@ -283,7 +278,7 @@ Minimal version — edit `ZONE_PARAMS` in `backend/app/scorer.py`, e.g.:
 
 ```python
 "rz-001": {"lithology": 7, "slope": 33, "pga": 0.01,
-           "wetness": 0.62,    # ← SNS-001 live soil moisture (% / 100)
+           "wetness": 0.62,    # ← live soil moisture push (% / 100)
            "rain": 38},        # ← district rain gauge, mm today
 ```
 
@@ -295,7 +290,7 @@ gateways push readings and the scorer picks them up on the next prediction:
 
 ```
 POST /api/v1/sensors/readings
-     {"sensor_id": "SNS-010", "zone_id": "rz-001",
+     {"sensor_id": "ESP32-A01-RAIN", "zone_id": "rz-001",
       "sensor_type": "rainfall", "value": 38, "unit": "mm"}
 GET  /api/v1/ml/predictions   # scorer reads latest readings per zone
 ```

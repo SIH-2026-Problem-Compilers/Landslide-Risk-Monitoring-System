@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { Fragment, useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { MapContainer, TileLayer, CircleMarker, Circle, Popup, useMap } from 'react-leaflet';
 import { dashboardService, sensorService } from '../services';
+import type { Sensor } from '../types';
 import { PageHeader } from '../components/ui/PageHeader';
 import { SeverityBadge } from '../components/ui/SeverityBadge';
 import { SkeletonMap } from '../components/ui/LoadingSkeleton';
@@ -74,6 +75,25 @@ function MapLegend() {
   return null;
 }
 
+/** Flies the map to the locally connected sensor when asked. */
+function LocalSensorFocus({
+  latitude,
+  longitude,
+  focusToken,
+}: {
+  latitude: number | null;
+  longitude: number | null;
+  focusToken: number;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (focusToken > 0 && latitude != null && longitude != null) {
+      map.flyTo([latitude, longitude], 14, { duration: 1.2 });
+    }
+  }, [focusToken, latitude, longitude, map]);
+  return null;
+}
+
 async function fetchHeatGrid() {
   const res = await fetch(`${API_BASE}/api/v1/ml/grid?step=0.25`);
   if (!res.ok) return [];
@@ -87,11 +107,57 @@ export function GISPage() {
     refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
   });
 
+  const queryClient = useQueryClient();
   const { data: sensors } = useQuery({
     queryKey: ['sensors'],
     queryFn: sensorService.getSensors,
-    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 60000),
+    refetchInterval: Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 15000),
   });
+
+  const { data: laptopLocation } = useQuery({
+    queryKey: ['laptop-location'],
+    queryFn: sensorService.getLaptopLocation,
+    refetchInterval: 15000,
+  });
+
+  // Share this laptop's GPS with the backend while the map is open, so a
+  // GPS-less station (or your position before the first reading) is shown here
+  // even if the Sensors page is not loaded.
+  useEffect(() => {
+    if (!('geolocation' in navigator)) return;
+    let lastSent = 0;
+    const send = (position: GeolocationPosition) => {
+      if (Date.now() - lastSent < 30_000) return;
+      lastSent = Date.now();
+      void sensorService
+        .sendHeartbeat({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracyM: position.coords.accuracy,
+          source: 'laptop_gps',
+        })
+        .then((result) => {
+          if (result) {
+            void queryClient.invalidateQueries({ queryKey: ['laptop-location'] });
+            void queryClient.invalidateQueries({ queryKey: ['sensors'] });
+          }
+        });
+    };
+    const options: PositionOptions = {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 30000,
+    };
+    const watchId = navigator.geolocation.watchPosition(send, () => {}, options);
+    const retry = setInterval(
+      () => navigator.geolocation.getCurrentPosition(send, () => {}, options),
+      60_000,
+    );
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      clearInterval(retry);
+    };
+  }, [queryClient]);
 
   const { data: heatGrid = [] } = useQuery({
     queryKey: ['heatmap-grid'],
@@ -110,6 +176,7 @@ export function GISPage() {
   const [activeLayers, setActiveLayers] = useState(layers);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [basemap, setBasemap] = useState<BasemapId>('streets');
+  const [focusToken, setFocusToken] = useState(0);
 
   const toggleLayer = (id: string) => {
     setActiveLayers((prev) =>
@@ -118,6 +185,33 @@ export function GISPage() {
   };
 
   const selectedZoneData = riskZones?.find((z) => z.id === selectedZone);
+
+  // Only stations with a real resolved position can be drawn.
+  const mappedSensors = (sensors ?? []).filter(
+    (sensor): sensor is Sensor & { latitude: number; longitude: number } =>
+      typeof sensor.latitude === 'number' && typeof sensor.longitude === 'number'
+  );
+  const localSensor = mappedSensors.find((sensor) => sensor.isLocal);
+  const laptopFix =
+    laptopLocation?.active &&
+    laptopLocation.latitude != null &&
+    laptopLocation.longitude != null
+      ? laptopLocation
+      : null;
+  // Center on the sensor marker if one is local; otherwise show where the
+  // laptop (the sensor's GPS fallback) currently is.
+  const focusPoint = localSensor
+    ? { latitude: localSensor.latitude, longitude: localSensor.longitude }
+    : laptopFix
+      ? { latitude: laptopFix.latitude as number, longitude: laptopFix.longitude as number }
+      : null;
+
+  const showLocalSensor = () => {
+    setActiveLayers((prev) =>
+      prev.map((l) => (l.id === 'sensors' ? { ...l, visible: true } : l))
+    );
+    setFocusToken((token) => token + 1);
+  };
 
   return (
     <div>
@@ -231,34 +325,133 @@ export function GISPage() {
                     </CircleMarker>
                   ))}
 
-                {/* Sensor Markers */}
+                {/* Sensor Markers — real stations only, placed at sensor/laptop GPS */}
                 {activeLayers.find((l) => l.id === 'sensors')?.visible &&
-                  sensors?.map((sensor) => (
-                    <CircleMarker
-                      key={sensor.id}
-                      center={[sensor.latitude, sensor.longitude]}
-                      radius={5}
-                      pathOptions={{
-                        color: sensor.status === 'online' ? '#22c55e' : sensor.status === 'warning' ? '#eab308' : '#ef4444',
-                        fillColor: sensor.status === 'online' ? '#22c55e' : sensor.status === 'warning' ? '#eab308' : '#ef4444',
-                        fillOpacity: 0.8,
-                        weight: 1,
-                      }}
-                    >
-                      <Popup>
-                        <div className="min-w-[180px]">
-                          <h4 className="font-semibold text-sm">{sensor.name}</h4>
-                          <p className="text-xs text-gray-500">{sensor.id}</p>
-                          <div className="mt-2 space-y-1">
-                            <p className="text-xs"><strong>Type:</strong> {sensor.type.replace(/_/g, ' ')}</p>
-                            <p className="text-xs"><strong>Status:</strong> {sensor.status}</p>
-                            <p className="text-xs"><strong>Reading:</strong> {sensor.lastReading} {sensor.unit}</p>
-                            <p className="text-xs"><strong>Battery:</strong> {sensor.batteryLevel == null ? 'Not reported' : `${sensor.batteryLevel}%`}</p>
+                  mappedSensors.map((sensor) => {
+                    const color = sensor.isLocal
+                      ? '#00B9F1'
+                      : sensor.status === 'online'
+                        ? '#22c55e'
+                        : sensor.status === 'warning'
+                          ? '#eab308'
+                          : '#ef4444';
+                    return (
+                      <Fragment key={sensor.id}>
+                        {sensor.isLocal && sensor.locationAccuracyM != null && (
+                          <Circle
+                            center={[sensor.latitude, sensor.longitude]}
+                            radius={Math.max(10, Math.min(500, sensor.locationAccuracyM))}
+                            pathOptions={{
+                              color: '#00B9F1',
+                              fillColor: '#00B9F1',
+                              fillOpacity: 0.08,
+                              weight: 1,
+                              dashArray: '4 4',
+                            }}
+                          />
+                        )}
+                        <CircleMarker
+                          center={[sensor.latitude, sensor.longitude]}
+                          radius={sensor.isLocal ? 9 : 5}
+                          pathOptions={{
+                            color,
+                            fillColor: color,
+                            fillOpacity: 0.85,
+                            weight: sensor.isLocal ? 3 : 1,
+                          }}
+                        >
+                          <Popup>
+                            <div className="min-w-[200px]">
+                              <h4 className="font-semibold text-sm">{sensor.name}</h4>
+                              <p className="text-xs text-gray-500">{sensor.id}</p>
+                              <div className="mt-2 space-y-1">
+                                <p className="text-xs"><strong>Type:</strong> {sensor.type.replace(/_/g, ' ')}</p>
+                                <p className="text-xs"><strong>Status:</strong> {sensor.status}</p>
+                                <p className="text-xs"><strong>Reading:</strong> {sensor.lastReading} {sensor.unit}</p>
+                                <p className="text-xs"><strong>Position:</strong> {sensor.locationSource.replace(/_/g, ' ')}</p>
+                                <p className="text-xs"><strong>Coordinates:</strong> {sensor.latitude.toFixed(5)}, {sensor.longitude.toFixed(5)}</p>
+                                {sensor.locationAccuracyM != null && (
+                                  <p className="text-xs"><strong>Accuracy:</strong> ±{Math.round(sensor.locationAccuracyM)} m</p>
+                                )}
+                                <p className="text-xs"><strong>Updated:</strong> {new Date(sensor.lastUpdated).toLocaleString()}</p>
+                                <p className="text-xs"><strong>Battery:</strong> {sensor.batteryLevel == null ? 'Not reported' : `${sensor.batteryLevel}%`}</p>
+                              </div>
+                            </div>
+                          </Popup>
+                        </CircleMarker>
+                      </Fragment>
+                    );
+                  })}
+
+                {/* Laptop GPS position — shown when no local sensor marker exists */}
+                {activeLayers.find((l) => l.id === 'sensors')?.visible &&
+                  !localSensor &&
+                  laptopFix && (
+                    <Fragment>
+                      {laptopFix.accuracyM != null && (
+                        <Circle
+                          center={[
+                            laptopFix.latitude as number,
+                            laptopFix.longitude as number,
+                          ]}
+                          radius={Math.max(10, Math.min(500, laptopFix.accuracyM))}
+                          pathOptions={{
+                            color: '#2563eb',
+                            fillColor: '#3b82f6',
+                            fillOpacity: 0.08,
+                            weight: 1,
+                            dashArray: '4 4',
+                          }}
+                        />
+                      )}
+                      <CircleMarker
+                        center={[
+                          laptopFix.latitude as number,
+                          laptopFix.longitude as number,
+                        ]}
+                        radius={9}
+                        pathOptions={{
+                          color: '#2563eb',
+                          fillColor: '#3b82f6',
+                          fillOpacity: 0.85,
+                          weight: 3,
+                        }}
+                      >
+                        <Popup>
+                          <div className="min-w-[210px]">
+                            <h4 className="font-semibold text-sm">Laptop GPS — sensor location</h4>
+                            <p className="text-xs text-gray-500">
+                              Used as the position fallback for a sensor without GPS.
+                            </p>
+                            <div className="mt-2 space-y-1 text-xs">
+                              <p><strong>Coordinates:</strong> {(laptopFix.latitude as number).toFixed(5)}, {(laptopFix.longitude as number).toFixed(5)}</p>
+                              {laptopFix.accuracyM != null && (
+                                <p><strong>Accuracy:</strong> ±{Math.round(laptopFix.accuracyM)} m</p>
+                              )}
+                              <p><strong>Nearest zone:</strong> {laptopFix.zoneName ?? '—'}</p>
+                              <p><strong>Source:</strong> {laptopFix.source ?? 'laptop_gps'}</p>
+                              {laptopFix.recordedAt && (
+                                <p><strong>Updated:</strong> {new Date(laptopFix.recordedAt).toLocaleTimeString()}</p>
+                              )}
+                              <p className="text-gray-500">
+                                {(sensors?.length ?? 0) === 0
+                                  ? 'No sensor readings received yet.'
+                                  : 'Waiting for a sensor station at this location.'}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </Popup>
-                    </CircleMarker>
-                  ))}
+                        </Popup>
+                      </CircleMarker>
+                    </Fragment>
+                  )}
+
+                {focusPoint && (
+                  <LocalSensorFocus
+                    latitude={focusPoint.latitude}
+                    longitude={focusPoint.longitude}
+                    focusToken={focusToken}
+                  />
+                )}
               </MapContainer>
             </div>
           )}
@@ -287,6 +480,25 @@ export function GISPage() {
                 </button>
               ))}
             </div>
+            {focusPoint && (
+              <button
+                type="button"
+                onClick={showLocalSensor}
+                className="w-full mb-3 px-2 py-1.5 text-xs font-medium rounded-lg border border-capri/30 bg-capri/10 text-aztec hover:bg-capri/20"
+              >
+                Center on my location
+              </button>
+            )}
+            {laptopFix && !activeLayers.find((l) => l.id === 'sensors')?.visible && (
+              <p className="text-[11px] text-amber-600 mb-2">
+                Laptop GPS is available — enable the Sensors layer to see it.
+              </p>
+            )}
+            {!focusPoint && (
+              <p className="text-[11px] text-gray-500 mb-2">
+                No GPS fix yet — allow location access, or open the Sensors page and enter coordinates.
+              </p>
+            )}
             <div className="space-y-2">
               {activeLayers.map((layer) => (
                 <label key={layer.id} className="flex items-center gap-2 cursor-pointer group">

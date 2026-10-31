@@ -23,7 +23,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 
-from .. import inputs, models, scorer, zones
+from .. import inputs, models, scorer, sensors, zones
 from ..db import get_session
 from ..providers import imd as imd_provider
 from ..providers import notify as notify_provider
@@ -48,6 +48,15 @@ class SensorReadingCreate(BaseModel):
     value: float
     unit: str = ""
     recorded_at: Optional[datetime] = None
+    # Optional station metadata — lets a GPS-less station inherit the laptop
+    # position and appear as one station instead of one row per channel.
+    station_id: Optional[str] = None
+    station_name: Optional[str] = None
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+    location_source: Optional[str] = None
+    location_accuracy_m: Optional[float] = Field(default=None, ge=0)
+    battery_level: Optional[float] = Field(default=None, ge=0, le=100)
 
 
 class ZoneInputUpdate(BaseModel):
@@ -60,9 +69,59 @@ class ImdRows(BaseModel):
 
 
 class SensorReadingBatch(BaseModel):
-    """One HTTP call carrying every reading from an IoT wake cycle."""
+    """One HTTP call carrying every reading from an IoT wake cycle.
+
+    ``station`` is optional station metadata (id/name/own GPS) so a unit with
+    an on-board GPS module can publish its own coordinates; without it the
+    laptop GPS fallback is used.
+    """
 
     readings: list[SensorReadingCreate] = Field(min_length=1, max_length=50)
+    station: Optional[dict] = None
+
+
+class StationInfo(BaseModel):
+    """Station metadata sent by the browser bridge (USB serial) or a station."""
+
+    station_id: str = Field(min_length=1, max_length=64)
+    name: Optional[str] = Field(default=None, max_length=128)
+    zone_id: Optional[str] = None
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+    location_source: Optional[str] = None
+    location_accuracy_m: Optional[float] = Field(default=None, ge=0)
+    battery_level: Optional[float] = Field(default=None, ge=0, le=100)
+
+
+class TelemetryReading(BaseModel):
+    sensor_type: str
+    value: float
+    unit: str = ""
+    channel: Optional[str] = None
+
+
+class StationTelemetry(BaseModel):
+    """Batched real readings from one station (no zone id required)."""
+
+    station: StationInfo
+    readings: list[TelemetryReading] = Field(min_length=1, max_length=50)
+
+
+class StationHeartbeat(BaseModel):
+    """Laptop GPS / station liveness ping.
+
+    ``station_id`` is optional: with it the position is attached to that
+    station; without it the backend only remembers the laptop position as a
+    fallback for GPS-less stations in the same zone.
+    """
+
+    station_id: Optional[str] = Field(default=None, max_length=64)
+    name: Optional[str] = Field(default=None, max_length=128)
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    location_source: str = "laptop_gps"
+    location_accuracy_m: Optional[float] = Field(default=None, ge=0)
+    battery_level: Optional[float] = Field(default=None, ge=0, le=100)
 
 
 class ReportCreate(BaseModel):
@@ -145,6 +204,57 @@ def _require_ingest_token(
     raise HTTPException(status_code=401, detail="Invalid or missing sensor ingest token")
 
 
+def _register_reading_station(
+    payload: SensorReadingCreate, station_info: Optional[StationInfo] = None
+) -> None:
+    """Register/refresh the station that owns this reading.
+
+    A sensor without a GPS module inherits the laptop position recorded by the
+    browser heartbeat, so it still appears on the GIS map at the demonstrator's
+    real location (labelled ``laptop_gps``). A station that reports its own
+    GPS always wins over that fallback.
+    """
+    station_id = (
+        (station_info.station_id if station_info else None)
+        or payload.station_id
+        or sensors.derive_station_id(payload.sensor_id)
+    )
+    latitude = payload.latitude
+    longitude = payload.longitude
+    location_source = payload.location_source
+    accuracy = payload.location_accuracy_m
+    name = payload.station_name
+    battery = payload.battery_level
+    if station_info is not None:
+        name = name or station_info.name
+        if latitude is None or longitude is None:
+            latitude, longitude = station_info.latitude, station_info.longitude
+            location_source = location_source or station_info.location_source
+            accuracy = (
+                accuracy if accuracy is not None else station_info.location_accuracy_m
+            )
+        if battery is None:
+            battery = station_info.battery_level
+    if latitude is None or longitude is None:
+        fallback = sensors.fallback_location_for_zone(payload.zone_id)
+        if fallback is not None:
+            latitude = fallback["latitude"]
+            longitude = fallback["longitude"]
+            location_source = location_source or fallback["source"]
+            accuracy = accuracy if accuracy is not None else fallback["accuracy_m"]
+    sensors.register_station(
+        station_id,
+        name=name,
+        zone_id=payload.zone_id,
+        latitude=latitude,
+        longitude=longitude,
+        location_source=location_source,
+        location_accuracy_m=accuracy,
+        battery_level=battery,
+        channels=[(payload.sensor_id, payload.sensor_type, payload.unit)],
+    )
+
+
 def _store_reading(payload: SensorReadingCreate) -> str | None:
     """Persist one reading; returns an error string for invalid zone ids."""
     if zones.zone_by_id(payload.zone_id) is None:
@@ -160,6 +270,7 @@ def _store_reading(payload: SensorReadingCreate) -> str | None:
     with get_session() as session:
         session.add(reading)
         session.commit()
+    _register_reading_station(payload)
     # soil moisture (percent) -> wetness, rainfall -> rain; feeds the scorer
     inputs.refresh_zone_from_readings(payload.zone_id)
     return None
@@ -183,6 +294,12 @@ def add_readings_batch(payload: SensorReadingBatch) -> dict:
     stored = 0
     errors: list[str] = []
     zones_touched: set[str] = set()
+    station_info: Optional[StationInfo] = None
+    if payload.station:
+        try:
+            station_info = StationInfo(**payload.station)
+        except Exception as exc:  # invalid optional metadata must not drop readings
+            errors.append(f"Invalid station metadata: {exc}")
     for reading in payload.readings:
         if zones.zone_by_id(reading.zone_id) is None:
             errors.append(f"Unknown zone_id: {reading.zone_id}")
@@ -198,11 +315,120 @@ def add_readings_batch(payload: SensorReadingBatch) -> dict:
         with get_session() as session:
             session.add(stored_reading)
             session.commit()
+        _register_reading_station(reading, station_info)
         zones_touched.add(reading.zone_id)
         stored += 1
     for zone_id in zones_touched:
         inputs.refresh_zone_from_readings(zone_id)
     return {"ok": stored > 0, "stored": stored, "errors": errors}
+
+
+@router.post("/sensors/ingest", dependencies=[Depends(_require_ingest_token)])
+def ingest_station_telemetry(payload: StationTelemetry) -> dict:
+    """Ingest a batch from one station, resolving its zone from GPS.
+
+    Used by the browser's USB-serial bridge: the ESP32/Arduino sketch prints
+    one JSON line per wake cycle, the page pairs it with the laptop's GPS
+    position and posts here. ``zone_id`` is optional — when absent the closest
+    monitoring zone within 50 km is used, otherwise readings are stored and
+    mapped without touching any zone's model inputs.
+    """
+    info = payload.station
+    latitude, longitude = info.latitude, info.longitude
+    if latitude is None or longitude is None:
+        fallback = sensors.get_laptop_location()
+        if fallback is not None:
+            latitude = fallback["latitude"]
+            longitude = fallback["longitude"]
+            info.location_source = info.location_source or fallback["source"]
+            info.location_accuracy_m = (
+                info.location_accuracy_m
+                if info.location_accuracy_m is not None
+                else fallback["accuracy_m"]
+            )
+
+    zone_id = sensors.zone_for_position(latitude, longitude, info.zone_id)
+    channels: list[tuple[str, str, str]] = []
+    recorded_at = _utcnow()
+    with get_session() as session:
+        for reading in payload.readings:
+            sensor_id = reading.channel or sensors.channel_id(
+                info.station_id, reading.sensor_type
+            )
+            session.add(
+                models.SensorReading(
+                    sensor_id=sensor_id,
+                    zone_id=zone_id,
+                    sensor_type=reading.sensor_type,
+                    value=reading.value,
+                    unit=reading.unit,
+                    recorded_at=recorded_at,
+                )
+            )
+            channels.append((sensor_id, reading.sensor_type, reading.unit))
+        session.commit()
+
+    station = sensors.register_station(
+        info.station_id,
+        name=info.name,
+        zone_id=zone_id,
+        latitude=latitude,
+        longitude=longitude,
+        location_source=info.location_source,
+        location_accuracy_m=info.location_accuracy_m,
+        battery_level=info.battery_level,
+        channels=channels,
+    )
+    if zone_id:
+        inputs.refresh_zone_from_readings(zone_id)
+    return {
+        "ok": True,
+        "stored": len(channels),
+        "zoneId": zone_id,
+        "station": station,
+    }
+
+
+@router.post("/sensors/heartbeat", dependencies=[Depends(_require_ingest_token)])
+def station_heartbeat(payload: StationHeartbeat) -> dict:
+    """Laptop GPS ping / station liveness.
+
+    Records the laptop position (browser geolocation or manual entry) so a
+    GPS-less station can inherit it, and refreshes the station's last-seen
+    time so the dashboard's online count is driven by reality.
+    """
+    laptop = sensors.record_laptop_location(
+        payload.latitude,
+        payload.longitude,
+        accuracy_m=payload.location_accuracy_m,
+        source=payload.location_source or "laptop_gps",
+    )
+    # Keep any GPS-less station marker at the current laptop position, without
+    # waiting for its next reading cycle.
+    sensors.sync_stations_to_laptop(laptop)
+    station = None
+    if payload.station_id:
+        station = sensors.register_station(
+            payload.station_id,
+            name=payload.name,
+            zone_id=laptop.get("zone_id") or "",
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            location_source=payload.location_source or "laptop_gps",
+            location_accuracy_m=payload.location_accuracy_m,
+            battery_level=payload.battery_level,
+        )
+    return {
+        "ok": True,
+        "latitude": laptop["latitude"],
+        "longitude": laptop["longitude"],
+        "zoneId": laptop.get("zone_id", ""),
+        "zoneName": laptop.get("zone_name"),
+        "distanceKm": laptop.get("distance_km"),
+        "accuracyM": laptop.get("accuracy_m"),
+        "recordedAt": laptop["recorded_at"].isoformat(),
+        "station": station,
+    }
 
 
 @router.get("/sensors/readings")

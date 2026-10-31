@@ -66,7 +66,7 @@ export function LoginPage() {
 
           <div className="mt-12 grid grid-cols-2 gap-4">
             {[
-              { value: '142+', label: 'Sensors' },
+              { value: 'Live', label: 'Sensors' },
               { value: '8', label: 'Districts' },
               { value: '24/7', label: 'Monitoring' },
               { value: '94%', label: 'Accuracy' },

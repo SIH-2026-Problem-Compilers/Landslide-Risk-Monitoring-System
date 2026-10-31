@@ -33,6 +33,8 @@ export interface DashboardSummary {
   highRiskZones: number;
   moderateRiskZones: number;
   sensorStationsOnline: number;
+  /** Total registered stations (optional for older API responses). */
+  sensorStationsTotal?: number;
   roadsBlocked: number;
   citizenReports: number;
   lastUpdated: string;
@@ -82,19 +84,73 @@ export interface Alert {
 // ---- Sensors ----
 export type SensorStatus = 'online' | 'offline' | 'maintenance' | 'warning';
 
+export type SensorLocationSource = 'sensor_gps' | 'laptop_gps' | 'manual' | 'zone' | 'unknown';
+
 export interface Sensor {
   id: string;
+  /** Station this channel belongs to (one ESP32 = one station, many channels). */
+  stationId: string;
   name: string;
-  type: 'soil_moisture' | 'rainfall' | 'temperature' | 'humidity' | 'tilt' | 'seismic';
+  type: 'soil_moisture' | 'rainfall' | 'temperature' | 'humidity' | 'tilt' | 'seismic' | 'battery';
   status: SensorStatus;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   district: string;
+  state?: string;
+  zoneId?: string;
   lastReading: number;
   unit: string;
   lastUpdated: string;
+  /** Seconds since the station's last push (null if unknown). */
+  ageSeconds?: number | null;
+  /** Where the marker position came from — a sensor GPS or the laptop fallback. */
+  locationSource: SensorLocationSource;
+  locationAccuracyM?: number | null;
+  /** True when this station is the locally connected / laptop-GPS one. */
+  isLocal?: boolean;
   /** Battery telemetry % — only present when a station actually reports it. */
   batteryLevel?: number;
+}
+
+export interface SensorHeartbeatResult {
+  ok: boolean;
+  latitude: number;
+  longitude: number;
+  zoneId: string;
+  zoneName: string;
+  distanceKm: number;
+  accuracyM: number | null;
+  recordedAt: string;
+}
+
+export interface LaptopLocation {
+  active: boolean;
+  latitude?: number;
+  longitude?: number;
+  accuracyM?: number | null;
+  source?: SensorLocationSource;
+  zoneId?: string;
+  zoneName?: string;
+  distanceKm?: number;
+  recordedAt?: string;
+}
+
+export interface StationReadingInput {
+  sensor_type: string;
+  value: number;
+  unit?: string;
+  channel?: string;
+}
+
+export interface StationTelemetryInput {
+  station_id: string;
+  name?: string;
+  zone_id?: string;
+  latitude?: number;
+  longitude?: number;
+  location_source?: SensorLocationSource;
+  location_accuracy_m?: number;
+  battery_level?: number;
 }
 
 export interface SensorReading {

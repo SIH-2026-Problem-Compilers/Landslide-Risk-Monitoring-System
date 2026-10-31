@@ -77,6 +77,27 @@ Open **http://127.0.0.1:5173/predictions** — the risk table, 24/48/72h forecas
 cards and AI recommendations are produced live by the LHASA model. A "Sample
 inputs" factor on every record marks demo mode.
 
+## Live sensor + laptop GPS demo
+
+The **Sensors** page lists only stations that actually reported data — there is
+no static "27 sensors" list and no synthetic sensor fallback. Two real paths
+feed it:
+
+- **Wi-Fi** — the ESP32 sketch in `hardware/esp32/lhasa_station/` pushes its
+  readings (soil moisture, temperature, humidity) to the API.
+- **USB** — click *Connect sensor* on the Sensors page in Chrome/Edge; the
+  browser reads the board's JSON lines over Web Serial and forwards them.
+
+The page asks the browser for the **laptop GPS** position (Windows/macOS
+location services). A station with no GPS module adopts that position as its
+map marker (`location_source = laptop_gps`), while its readings still feed the
+monitoring zone configured in the firmware. Enable the **Sensors** layer on the
+GIS page to see it, then use *Center on my sensor*. If location permission is
+denied, coordinates can be entered manually in the same panel.
+
+Station metadata and positions live in the `sensor_stations` table, created
+automatically on startup.
+
 ## Live mode (real NASA satellite data)
 
 Demo output is enabled by default (`LHASA_DEMO=1`). For genuine nowcasts
@@ -124,6 +145,9 @@ rasters, or your sensor network) is documented step by step in
 | GET    | `/api/v1/seismic/live`          | Live USGS earthquakes in the India study area      |
 | POST   | `/api/v1/weather/refresh`       | Pull Open-Meteo current + 3-day forecast           |
 | POST   | `/api/v1/sensors/readings`      | IoT / field sensor push (feeds the model)          |
+| POST   | `/api/v1/sensors/ingest`        | One station's reading batch, zone resolved from GPS |
+| POST   | `/api/v1/sensors/heartbeat`     | Laptop GPS / station liveness ping                  |
+| GET    | `/api/v1/sensors`               | Real registered stations only (no static list)      |
 | POST   | `/api/v1/ml/evaluate`           | Raise alerts + fan out via SMS/webhook adapters    |
 
 Interactive API docs: **http://127.0.0.1:8000/docs**.
@@ -133,6 +157,7 @@ Interactive API docs: **http://127.0.0.1:8000/docs**.
 | Variable             | Default                    | Purpose                                   |
 | -------------------- | -------------------------- | ----------------------------------------- |
 | `VITE_LHASA_API_URL` | *(none — dev proxy)*       | Backend origin for a deployed frontend    |
+| `VITE_SENSOR_TOKEN`  | *(none)*                   | Sent as `X-Sensor-Token` by the browser sensor bridge when ingest auth is enabled |
 | `LHASA_DIR`          | `<repo>/LHASA`             | Where `lhasa.py`/`model.json` live        |
 | `LHASA_OUTPUT_DIR`   | `<LHASA_DIR>`              | Manual-run output directory               |
 | `LHASA_PYTHON`       | `python`                   | Interpreter used to launch `lhasa.py`     |

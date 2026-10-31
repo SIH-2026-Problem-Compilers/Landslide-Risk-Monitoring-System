@@ -28,7 +28,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import desc, select
 
-from .. import inputs, scorer, zones
+from .. import inputs, scorer, sensors as sensor_registry, zones
 from ..db import get_session
 from ..models import AlertRecord, SensorReading, ZoneInput
 from ..output_reader import severity_for
@@ -180,27 +180,14 @@ def dashboard_summary() -> dict:
         ).all()
         alert_count = len(active_alerts)
 
-        # Sensor stations: derived stations count as online when their zone
-        # currently has live weather inputs; IoT stations count when they
-        # pushed a reading in the last 3 hours. No hard-coded fallback.
-        cutoff = _utcnow() - timedelta(hours=3)
-        recent_iot = session.scalars(
-            select(SensorReading.sensor_id)
-            .where(SensorReading.recorded_at >= cutoff)
-            .distinct()
-        ).all()
-
-    sensors_online = 0
-    for sensor in _MONITORING_SENSORS:
-        live = inputs.get_live(sensor["zone_id"])
-        if live and (live.get("rain") is not None or live.get("wetness") is not None):
-            sensors_online += 1
-    sensors_online += sum(1 for sid in recent_iot if sid not in _SENSOR_INDEX)
+    # Only real stations count: online = heard from within the online window.
+    # No hard-coded sensor total and no Open-Meteo proxy counting.
     return {
         "totalActiveAlerts": alert_count,
         "highRiskZones": high_risk,
         "moderateRiskZones": moderate_risk,
-        "sensorStationsOnline": sensors_online,
+        "sensorStationsOnline": sensor_registry.online_station_count(),
+        "sensorStationsTotal": sensor_registry.station_count(),
         "roadsBlocked": _count_blocked_roads(),
         "citizenReports": _count_recent_reports(),
         "lastUpdated": _utcnow().isoformat(),
@@ -362,167 +349,33 @@ def rainfall_vs_risk() -> list[dict]:
 # Sensor endpoints
 # ---------------------------------------------------------------------------
 
-# Sensor metadata for the all-India monitoring zones (one per zone, plus a
-# few extra in the original NER pilot districts).
-_MONITORING_SENSORS = [
-    {"id": "SNS-001", "name": "Aizawl Soil Moisture A", "type": "soil_moisture", "latitude": 23.74, "longitude": 92.72, "district": "Aizawl", "zone_id": "rz-007", "unit": "%"},
-    {"id": "SNS-002", "name": "Mangan Rain Gauge", "type": "rainfall", "latitude": 27.52, "longitude": 88.54, "district": "Mangan", "zone_id": "rz-011", "unit": "mm/hr"},
-    {"id": "SNS-003", "name": "Shillong Rainfall Gauge", "type": "rainfall", "latitude": 25.58, "longitude": 91.89, "district": "East Khasi Hills", "zone_id": "rz-005", "unit": "mm/hr"},
-    {"id": "SNS-004", "name": "Kohima Tilt Sensor", "type": "tilt", "latitude": 25.66, "longitude": 94.10, "district": "Kohima", "zone_id": "rz-009", "unit": "°"},
-    {"id": "SNS-005", "name": "Haflong Moisture B", "type": "soil_moisture", "latitude": 25.17, "longitude": 93.01, "district": "Dima Hasao", "zone_id": "rz-003", "unit": "%"},
-    {"id": "SNS-006", "name": "Lunglei Rainfall", "type": "rainfall", "latitude": 22.89, "longitude": 92.74, "district": "Lunglei", "zone_id": "rz-008", "unit": "mm/hr"},
-    {"id": "SNS-007", "name": "Gangtok Seismic", "type": "seismic", "latitude": 27.34, "longitude": 88.63, "district": "Gangtok", "zone_id": "rz-012", "unit": "RMS"},
-    {"id": "SNS-008", "name": "Senapati Moisture", "type": "soil_moisture", "latitude": 25.27, "longitude": 94.02, "district": "Senapati", "zone_id": "rz-004", "unit": "%"},
-    {"id": "SNS-009", "name": "Tura Tilt", "type": "tilt", "latitude": 25.52, "longitude": 90.21, "district": "West Garo Hills", "zone_id": "rz-006", "unit": "°"},
-    {"id": "SNS-010", "name": "Bomdila Rainfall", "type": "rainfall", "latitude": 27.09, "longitude": 92.41, "district": "West Kameng", "zone_id": "rz-001", "unit": "mm/hr"},
-    {"id": "SNS-011", "name": "Dhalai Soil Moisture", "type": "soil_moisture", "latitude": 23.94, "longitude": 91.86, "district": "Dhalai", "zone_id": "rz-013", "unit": "%"},
-    {"id": "SNS-012", "name": "Itanagar Rain Gauge", "type": "rainfall", "latitude": 27.11, "longitude": 93.63, "district": "Papum Pare", "zone_id": "rz-002", "unit": "mm/hr"},
-    {"id": "SNS-013", "name": "Phek Tilt Sensor", "type": "tilt", "latitude": 25.67, "longitude": 94.45, "district": "Phek", "zone_id": "rz-010", "unit": "°"},
-    # ---- Himachal / Uttarakhand / J&K ----
-    {"id": "SNS-014", "name": "Kalpa Tilt Sensor", "type": "tilt", "latitude": 31.53, "longitude": 78.26, "district": "Kinnaur", "zone_id": "rz-014", "unit": "°"},
-    {"id": "SNS-015", "name": "Shimla Rain Gauge", "type": "rainfall", "latitude": 31.10, "longitude": 77.17, "district": "Shimla", "zone_id": "rz-015", "unit": "mm/hr"},
-    {"id": "SNS-016", "name": "Joshimath Moisture", "type": "soil_moisture", "latitude": 30.55, "longitude": 79.56, "district": "Chamoli", "zone_id": "rz-016", "unit": "%"},
-    {"id": "SNS-017", "name": "Rudraprayag Rain Gauge", "type": "rainfall", "latitude": 30.26, "longitude": 79.06, "district": "Rudraprayag", "zone_id": "rz-017", "unit": "mm/hr"},
-    {"id": "SNS-018", "name": "Kishtwar Rain Gauge", "type": "rainfall", "latitude": 33.31, "longitude": 75.77, "district": "Kishtwar", "zone_id": "rz-018", "unit": "mm/hr"},
-    {"id": "SNS-019", "name": "Anantnag Soil Moisture", "type": "soil_moisture", "latitude": 33.73, "longitude": 75.15, "district": "Anantnag", "zone_id": "rz-019", "unit": "%"},
-    # ---- Darjeeling Himalaya ----
-    {"id": "SNS-020", "name": "Darjeeling Rainfall", "type": "rainfall", "latitude": 27.04, "longitude": 88.26, "district": "Darjeeling", "zone_id": "rz-020", "unit": "mm/hr"},
-    {"id": "SNS-021", "name": "Kalimpong Moisture", "type": "soil_moisture", "latitude": 27.22, "longitude": 88.47, "district": "Kalimpong", "zone_id": "rz-021", "unit": "%"},
-    # ---- Western Ghats ----
-    {"id": "SNS-022", "name": "Mahabaleshwar Rain Gauge", "type": "rainfall", "latitude": 17.93, "longitude": 73.66, "district": "Satara", "zone_id": "rz-022", "unit": "mm/hr"},
-    {"id": "SNS-023", "name": "Mahad Moisture", "type": "soil_moisture", "latitude": 18.09, "longitude": 73.40, "district": "Raigad", "zone_id": "rz-023", "unit": "%"},
-    {"id": "SNS-024", "name": "Wayanad Soil Moisture", "type": "soil_moisture", "latitude": 11.68, "longitude": 76.13, "district": "Wayanad", "zone_id": "rz-024", "unit": "%"},
-    {"id": "SNS-025", "name": "Munnar Tilt Sensor", "type": "tilt", "latitude": 9.85, "longitude": 76.97, "district": "Idukki", "zone_id": "rz-025", "unit": "°"},
-    {"id": "SNS-026", "name": "Madikeri Rain Gauge", "type": "rainfall", "latitude": 12.42, "longitude": 75.74, "district": "Kodagu", "zone_id": "rz-026", "unit": "mm/hr"},
-    {"id": "SNS-027", "name": "Nilgiris Soil Moisture", "type": "soil_moisture", "latitude": 11.41, "longitude": 76.69, "district": "The Nilgiris", "zone_id": "rz-027", "unit": "%"},
-]
-
-_SENSOR_INDEX = {s["id"]: s for s in _MONITORING_SENSORS}
-
-
-def _build_sensor_reading(sensor_meta: dict) -> dict:
-    """Build a sensor dict enriched with the latest reading from live inputs."""
-    zone_id = sensor_meta["zone_id"]
-    live = inputs.get_live(zone_id)
-
-    last_reading: float = 0.0
-    status = "online"
-
-    if live:
-        stype = sensor_meta["type"]
-        if stype == "rainfall" and live.get("rain") is not None:
-            last_reading = round(float(live["rain"]), 1)
-        elif stype == "soil_moisture" and live.get("wetness") is not None:
-            last_reading = round(float(live["wetness"]) * 100, 1)
-        elif stype == "tilt":
-            # Tilt derived from soil wetness (heuristic: wetter = more creep)
-            wet = live.get("wetness") or 0
-            last_reading = round(wet * 5.0, 2)
-        elif stype == "seismic":
-            last_reading = 0.2
-        status = "online"
-    else:
-        # No live data — report as offline
-        status = "offline"
-        last_reading = 0.0
-
-    # Check DB for a recent pushed reading (overrides Open-Meteo estimate)
-    try:
-        with get_session() as session:
-            row = session.scalars(
-                select(SensorReading)
-                .where(SensorReading.sensor_id == sensor_meta["id"])
-                .order_by(desc(SensorReading.recorded_at))
-                .limit(1)
-            ).first()
-        if row:
-            last_reading = round(float(row.value), 2)
-            cutoff = _utcnow() - timedelta(hours=3)
-            status = "online" if row.recorded_at >= cutoff else "warning"
-    except Exception:
-        pass
-
-    return {
-        "id": sensor_meta["id"],
-        "name": sensor_meta["name"],
-        "type": sensor_meta["type"],
-        "status": status,
-        "latitude": sensor_meta["latitude"],
-        "longitude": sensor_meta["longitude"],
-        "district": sensor_meta["district"],
-        "lastReading": last_reading,
-        "unit": sensor_meta["unit"],
-        "lastUpdated": _utcnow().isoformat(),
-        # batteryLevel is intentionally omitted for derived stations: only
-        # real battery telemetry (IoT push) should ever appear, never a guess.
-    }
-
-
-def _discovered_iot_sensors() -> list[dict]:
-    """Sensors seen in the readings table that are not in the static list.
-
-    Lets ESP32 stations (doc/IOT_INTEGRATION.md) appear on the Sensors page
-    and GIS map simply by pushing readings — no code or restart needed.
-    Coordinates and district come from the zone the reading was tagged with.
-    """
-    try:
-        with get_session() as session:
-            sensor_ids = session.scalars(
-                select(SensorReading.sensor_id).distinct()
-            ).all()
-            recent_cutoff = _utcnow() - timedelta(hours=3)
-            result: list[dict] = []
-            for sensor_id in sensor_ids:
-                if sensor_id in _SENSOR_INDEX:
-                    continue
-                latest = session.scalars(
-                    select(SensorReading)
-                    .where(SensorReading.sensor_id == sensor_id)
-                    .order_by(desc(SensorReading.recorded_at))
-                    .limit(1)
-                ).first()
-                if latest is None:
-                    continue
-                is_recent = session.scalars(
-                    select(SensorReading.id)
-                    .where(
-                        SensorReading.sensor_id == sensor_id,
-                        SensorReading.recorded_at >= recent_cutoff,
-                    )
-                    .limit(1)
-                ).first()
-                zone = zones.zone_by_id(latest.zone_id)
-                result.append(
-                    {
-                        "id": sensor_id,
-                        "name": f"{sensor_id} ({latest.sensor_type.replace('_', ' ')})",
-                        "type": latest.sensor_type,
-                        "status": "online" if is_recent else "warning",
-                        "latitude": zone["latitude"] if zone else 0.0,
-                        "longitude": zone["longitude"] if zone else 0.0,
-                        "district": zone["district"] if zone else "",
-                        "lastReading": round(float(latest.value), 2),
-                        "unit": latest.unit,
-                        "lastUpdated": latest.recorded_at.isoformat(),
-                        # no batteryLevel: only emit real telemetry, never a guess
-                    }
-                )
-    except Exception:
-        return []
-    return sorted(result, key=lambda sensor: sensor["id"])
-
+# Sensors are real stations only: every row comes from the sensor registry,
+# populated by actual reading pushes / laptop-GPS heartbeats. There is no
+# static station list and no synthetic fallback.
 
 @router.get("/sensors")
 def list_sensors() -> list[dict]:
-    return [_build_sensor_reading(s) for s in _MONITORING_SENSORS] + _discovered_iot_sensors()
+    """Real, dynamically updated sensor channels from connected stations."""
+    return sensor_registry.list_sensors()
+
+
+@router.get("/sensors/location")
+def laptop_gps_location() -> dict:
+    """Last laptop GPS fix used as the fallback for GPS-less stations.
+
+    Declared before ``/sensors/{sensor_id}`` so the literal path wins. The GIS
+    page uses this to show the user's current position even before the first
+    sensor reading arrives.
+    """
+    return sensor_registry.laptop_status()
 
 
 @router.get("/sensors/{sensor_id}")
 def get_sensor(sensor_id: str) -> dict:
-    meta = _SENSOR_INDEX.get(sensor_id)
-    if meta is None:
+    sensor = sensor_registry.get_sensor(sensor_id)
+    if sensor is None:
         raise HTTPException(status_code=404, detail="Sensor not found")
-    return _build_sensor_reading(meta)
+    return sensor
 
 
 @router.get("/sensors/{sensor_id}/readings")
@@ -551,7 +404,9 @@ def sensor_readings(
         return []
     return [
         {
-            "timestamp": r.recorded_at.isoformat(),
+            "timestamp": (
+                sensor_registry.as_utc(r.recorded_at) or r.recorded_at
+            ).isoformat(),
             "value": round(float(r.value), 2),
             "unit": r.unit,
         }
